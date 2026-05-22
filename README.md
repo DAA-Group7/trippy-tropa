@@ -19,19 +19,21 @@ Smart Collaborative Group Management System for academic group work. Web-only, f
 Copy the example env file and add your Supabase keys:
 
 ```bash
-cp .env.example .env.local
+cp .env.example .env
 ```
 
-| Variable | Description |
-|----------|-------------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/public key |
-| `NEXT_PUBLIC_APP_URL` | Site URL for invite links (e.g. `http://localhost:3000`) |
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL (Settings → API) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anon/public key (Settings → API) |
+| `NEXT_PUBLIC_APP_URL` | Yes* | Public site URL for invite links and QR codes (`http://localhost:3000` in dev) |
+
+\* Defaults to `http://localhost:3000` in code if unset, but set it explicitly before deploying.
 
 ### 2. Supabase
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. Run `supabase/migrations/001_initial_schema.sql` in the SQL editor.
+2. Run migrations in order in the SQL editor: `001_initial_schema.sql`, then `002_classroom_invite_policies.sql`.
 3. Enable Email auth under Authentication → Providers.
 4. Add RLS policies for `officer` vs `student` roles (schema includes table stubs).
 
