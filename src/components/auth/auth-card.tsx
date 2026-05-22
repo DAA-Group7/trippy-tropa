@@ -1,0 +1,282 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  Eye,
+  EyeOff,
+  GraduationCap,
+  Link2,
+  LogIn,
+  UserPlus,
+} from "lucide-react";
+import { toast } from "sonner";
+import { buildJoinUrl } from "@/lib/invite";
+import { routes } from "@/lib/constants/routes";
+import { cn } from "@/lib/utils";
+
+const inputClass =
+  "w-full rounded-lg border border-[#c3c6d7] bg-white px-4 py-2.5 text-base text-[#191b23] transition-colors placeholder:text-[#737686] focus:border-[#2563eb] focus:outline-none focus:ring-1 focus:ring-[#2563eb]";
+
+const cardShadow =
+  "shadow-[0_1px_3px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.03)]";
+
+export type AuthMode = "login" | "register";
+
+interface AuthCardProps {
+  mode: AuthMode;
+  inviteCode?: string;
+  redirect?: string;
+}
+
+function authHref(mode: AuthMode, inviteCode?: string, redirect?: string) {
+  const base = mode === "login" ? routes.login : routes.register;
+  const params = new URLSearchParams();
+  if (inviteCode) params.set("code", inviteCode);
+  if (redirect) params.set("redirect", redirect);
+  const q = params.toString();
+  return q ? `${base}?${q}` : base;
+}
+
+export function AuthCard({ mode, inviteCode, redirect }: AuthCardProps) {
+  const router = useRouter();
+  const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+
+  const joinUrl = inviteCode ? buildJoinUrl(inviteCode) : null;
+  const isLogin = mode === "login";
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || !password) {
+      toast.error("Please enter your email and password");
+      return;
+    }
+    if (!isLogin && !fullName.trim()) {
+      toast.error("Please enter your full name");
+      return;
+    }
+
+    toast.info(
+      isLogin
+        ? "Sign in will connect to Supabase Auth when wired"
+        : "Registration will connect to Supabase Auth when wired"
+    );
+
+    const destination =
+      redirect ??
+      (inviteCode ? routes.joinByCode(inviteCode) : routes.student.dashboard);
+    router.push(destination);
+  };
+
+  const handleSso = () => {
+    toast.info("University SSO will be available when auth is wired");
+  };
+
+  return (
+    <div
+      className={cn(
+        "w-full max-w-md overflow-hidden rounded-lg border border-[#c3c6d7] bg-white",
+        cardShadow
+      )}
+    >
+      <div className="px-6 pb-4 pt-8 text-center md:px-8 md:pt-10">
+        <h1 className="text-2xl font-semibold tracking-tight text-[#004ac6] sm:text-3xl">
+          Smart Collaborative
+        </h1>
+        <p className="mt-1 text-base text-[#434655]">
+          {isLogin
+            ? "Sign in to your academic workspace."
+            : "Create your student account to join group work."}
+        </p>
+      </div>
+
+      {inviteCode && joinUrl && (
+        <div className="mx-6 mb-4 rounded-lg border border-[#004ac6]/20 bg-[#dbe1ff]/50 p-3 md:mx-8">
+          <div className="flex items-start gap-2">
+            <Link2 className="mt-0.5 size-4 shrink-0 text-[#004ac6]" />
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-[#004ac6]">
+                Joining via classroom invite
+              </p>
+              <p className="truncate text-xs text-[#505f76]">{joinUrl}</p>
+              <p className="mt-1 text-xs text-[#434655]">
+                Sign in or register to continue to the join page.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="px-6 pb-6 md:px-8">
+        <div className="flex rounded-lg border border-[#c3c6d7] bg-[#f3f3fe] p-1">
+          <Link
+            href={authHref("login", inviteCode, redirect)}
+            className={cn(
+              "flex-1 rounded-md py-2.5 text-center text-sm font-medium transition-colors",
+              isLogin
+                ? "border border-[#c3c6d7] bg-white text-[#191b23] shadow-sm"
+                : "text-[#434655] hover:text-[#191b23]"
+            )}
+          >
+            Login
+          </Link>
+          <Link
+            href={authHref("register", inviteCode, redirect)}
+            className={cn(
+              "flex-1 rounded-md py-2.5 text-center text-sm font-medium transition-colors",
+              !isLogin
+                ? "border border-[#c3c6d7] bg-white text-[#191b23] shadow-sm"
+                : "text-[#434655] hover:text-[#191b23]"
+            )}
+          >
+            Register
+          </Link>
+        </div>
+      </div>
+
+      <div className="px-6 pb-8 md:px-8">
+        <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+          {!isLogin && (
+            <div className="flex flex-col gap-1">
+              <label
+                htmlFor="fullName"
+                className="text-sm font-medium text-[#191b23]"
+              >
+                Full name
+              </label>
+              <input
+                id="fullName"
+                type="text"
+                className={inputClass}
+                placeholder="Jane Doe"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                autoComplete="name"
+              />
+            </div>
+          )}
+
+          <div className="flex flex-col gap-1">
+            <label htmlFor="email" className="text-sm font-medium text-[#191b23]">
+              Institutional Email
+            </label>
+            <input
+              id="email"
+              type="email"
+              className={inputClass}
+              placeholder="researcher@university.edu"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center justify-between">
+              <label
+                htmlFor="password"
+                className="text-sm font-medium text-[#191b23]"
+              >
+                Password
+              </label>
+              {isLogin && (
+                <button
+                  type="button"
+                  className="text-xs font-semibold text-[#004ac6] hover:underline"
+                  onClick={() =>
+                    toast.info("Password reset will be available when wired")
+                  }
+                >
+                  Forgot password?
+                </button>
+              )}
+            </div>
+            <div className="relative">
+              <input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                className={cn(inputClass, "pr-11")}
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete={isLogin ? "current-password" : "new-password"}
+              />
+              <button
+                type="button"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#737686] transition-colors hover:text-[#434655]"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? (
+                  <EyeOff className="size-5" />
+                ) : (
+                  <Eye className="size-5" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            className="mt-1 flex w-full items-center justify-center gap-2 rounded-lg bg-[#2563eb] px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:bg-[#004ac6] hover:opacity-95"
+          >
+            {isLogin ? (
+              <>
+                Sign In
+                <LogIn className="size-[18px]" />
+              </>
+            ) : (
+              <>
+                Create Account
+                <UserPlus className="size-[18px]" />
+              </>
+            )}
+          </button>
+        </form>
+
+        <div className="relative flex items-center py-6">
+          <div className="flex-grow border-t border-[#c3c6d7]" />
+          <span className="mx-4 shrink-0 text-xs font-semibold uppercase tracking-wide text-[#434655]">
+            Single Sign-On
+          </span>
+          <div className="flex-grow border-t border-[#c3c6d7]" />
+        </div>
+
+        <button
+          type="button"
+          onClick={handleSso}
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#c3c6d7] bg-white px-4 py-2.5 text-sm font-medium text-[#505f76] transition-colors hover:bg-[#f3f3fe]"
+        >
+          <GraduationCap className="size-[18px] text-[#004ac6]" />
+          Continue with University Portal
+        </button>
+      </div>
+
+      <div className="border-t border-[#c3c6d7] bg-[#f3f3fe] p-4 text-center">
+        <p className="text-sm text-[#434655]">
+          By signing in, you agree to the{" "}
+          <button
+            type="button"
+            className="text-[#004ac6] hover:underline"
+            onClick={() => toast.info("Terms of Service — coming soon")}
+          >
+            Terms of Service
+          </button>{" "}
+          and{" "}
+          <button
+            type="button"
+            className="text-[#004ac6] hover:underline"
+            onClick={() => toast.info("Privacy Policy — coming soon")}
+          >
+            Privacy Policy
+          </button>
+          .
+        </p>
+      </div>
+    </div>
+  );
+}

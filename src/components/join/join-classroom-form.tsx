@@ -64,8 +64,12 @@ export function JoinClassroomForm({ initialCode }: JoinClassroomFormProps) {
       lookupClassroom();
       return;
     }
-    // TODO: enroll member in classroom_members when auth is wired
-    router.push(routes.onboarding);
+    const code = parseInviteCodeFromInput(input) ?? initialCode;
+    const loginHref = code
+      ? `${routes.login}?code=${encodeURIComponent(code)}&redirect=${encodeURIComponent(routes.onboarding)}`
+      : routes.login;
+    // TODO: enroll member when auth session exists; until then route via sign-in
+    router.push(loginHref);
   };
 
   return (
@@ -126,12 +130,26 @@ export function JoinClassroomForm({ initialCode }: JoinClassroomFormProps) {
           </button>
         </div>
 
-        <p className="mt-4 text-center text-sm text-[#505f76]">
-          <Link href={routes.login} className="font-medium text-[#004ac6]">
+          <p className="mt-4 text-center text-sm text-[#505f76]">
+          <Link
+            href={
+              initialCode
+                ? `${routes.login}?code=${encodeURIComponent(initialCode)}`
+                : routes.login
+            }
+            className="font-medium text-[#004ac6]"
+          >
             Sign in
           </Link>{" "}
           or{" "}
-          <Link href={routes.register} className="font-medium text-[#004ac6]">
+          <Link
+            href={
+              initialCode
+                ? `${routes.register}?code=${encodeURIComponent(initialCode)}`
+                : routes.register
+            }
+            className="font-medium text-[#004ac6]"
+          >
             register
           </Link>{" "}
           to save your enrollment.
