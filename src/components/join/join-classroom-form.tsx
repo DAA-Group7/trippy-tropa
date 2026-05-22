@@ -65,8 +65,11 @@ export function JoinClassroomForm({ initialCode }: JoinClassroomFormProps) {
       return;
     }
     const code = parseInviteCodeFromInput(input) ?? initialCode;
+    const onboardingHref = code
+      ? `${routes.onboarding}?code=${encodeURIComponent(code)}`
+      : routes.onboarding;
     const loginHref = code
-      ? `${routes.login}?code=${encodeURIComponent(code)}&redirect=${encodeURIComponent(routes.onboarding)}`
+      ? `${routes.login}?code=${encodeURIComponent(code)}&redirect=${encodeURIComponent(onboardingHref)}`
       : routes.login;
     // TODO: enroll member when auth session exists; until then route via sign-in
     router.push(loginHref);

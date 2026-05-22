@@ -68,7 +68,9 @@ export function AuthCard({ mode, inviteCode, redirect }: AuthCardProps) {
 
     const destination =
       redirect ??
-      (inviteCode ? routes.joinByCode(inviteCode) : routes.student.dashboard);
+      (inviteCode
+        ? `${routes.onboarding}?code=${encodeURIComponent(inviteCode)}`
+        : routes.onboarding);
     router.push(destination);
   };
 
