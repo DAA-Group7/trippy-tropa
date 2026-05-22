@@ -33,9 +33,15 @@ cp .env.example .env
 ### 2. Supabase
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. Run migrations in order in the SQL editor: `001_initial_schema.sql`, then `002_classroom_invite_policies.sql`.
-3. Enable Email auth under Authentication → Providers.
-4. Add RLS policies for `officer` vs `student` roles (schema includes table stubs).
+2. Run migrations in order (SQL editor or `supabase db push`):
+   - `001_initial_schema.sql`
+   - `002_classroom_invite_policies.sql`
+   - `003_rbac_auth.sql`
+   - `004_seed_dev_users.sql`
+3. Enable **Email** auth under Authentication → Providers (confirm email can be off for local dev).
+4. Dev logins — see [supabase/SEED_USERS.md](supabase/SEED_USERS.md).
+
+**RBAC:** Middleware and layouts enforce roles. Officers cannot open `/student/*`; students cannot open `/officer/*`. Unauthenticated users are redirected to `/login`.
 
 ### 3. Run locally
 

@@ -1,8 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import {
+  signInWithPassword,
+  signUpStudent,
+} from "@/app/actions/auth";
 import {
   Eye,
   EyeOff,
@@ -42,6 +46,7 @@ function authHref(mode: AuthMode, inviteCode?: string, redirect?: string) {
 
 export function AuthCard({ mode, inviteCode, redirect }: AuthCardProps) {
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -61,18 +66,33 @@ export function AuthCard({ mode, inviteCode, redirect }: AuthCardProps) {
       return;
     }
 
-    toast.info(
-      isLogin
-        ? "Sign in will connect to Supabase Auth when wired"
-        : "Registration will connect to Supabase Auth when wired"
-    );
+    const fallbackRedirect = inviteCode
+      ? `${routes.onboarding}?code=${encodeURIComponent(inviteCode)}`
+      : undefined;
 
-    const destination =
-      redirect ??
-      (inviteCode
-        ? `${routes.onboarding}?code=${encodeURIComponent(inviteCode)}`
-        : routes.onboarding);
-    router.push(destination);
+    startTransition(async () => {
+      const result = isLogin
+        ? await signInWithPassword(
+            email,
+            password,
+            redirect ?? fallbackRedirect
+          )
+        : await signUpStudent(
+            email,
+            password,
+            fullName,
+            redirect ?? fallbackRedirect
+          );
+
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+
+      toast.success(isLogin ? "Signed in" : "Account created");
+      router.push(result.redirectTo);
+      router.refresh();
+    });
   };
 
   const handleSso = () => {
@@ -225,9 +245,12 @@ export function AuthCard({ mode, inviteCode, redirect }: AuthCardProps) {
 
           <button
             type="submit"
-            className="mt-1 flex w-full items-center justify-center gap-2 rounded-lg bg-[#2563eb] px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:bg-[#004ac6] hover:opacity-95"
+            disabled={isPending}
+            className="mt-1 flex w-full items-center justify-center gap-2 rounded-lg bg-[#2563eb] px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:bg-[#004ac6] hover:opacity-95 disabled:opacity-60"
           >
-            {isLogin ? (
+            {isPending ? (
+              "Please wait…"
+            ) : isLogin ? (
               <>
                 Sign In
                 <LogIn className="size-[18px]" />
