@@ -1,16 +1,18 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ArrowRight, DoorOpen, HelpCircle } from "lucide-react";
 import { toast } from "sonner";
-import { getClassroomByInviteCode } from "@/app/actions/join-classroom";
 import { parseInviteCodeFromInput } from "@/lib/invite";
 import { routes } from "@/lib/constants/routes";
-import { cn } from "@/lib/utils";
 
 const inputClass =
-  "w-full rounded-lg border border-[#c3c6d7] bg-white px-4 py-2.5 text-base text-[#191b23] focus:border-[#004ac6] focus:outline-none focus:ring-1 focus:ring-[#004ac6]";
+  "w-full rounded-lg border border-[#c3c6d7] bg-[#faf8ff] px-4 py-3 text-base text-[#191b23] transition-colors placeholder:text-[#737686] focus:border-[#004ac6] focus:outline-none focus:ring-1 focus:ring-[#004ac6]";
+
+const cardShadow =
+  "shadow-[0_10px_15px_-3px_rgba(0,0,0,0.08)]";
 
 interface JoinClassroomFormProps {
   initialCode?: string;
@@ -18,145 +20,97 @@ interface JoinClassroomFormProps {
 
 export function JoinClassroomForm({ initialCode }: JoinClassroomFormProps) {
   const router = useRouter();
-  const [input, setInput] = useState(initialCode ?? "");
-  const [preview, setPreview] = useState<{
-    id: string;
-    name: string;
-    subject: string | null;
-  } | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [code, setCode] = useState(initialCode ?? "");
 
-  useEffect(() => {
-    if (!initialCode) return;
-    startTransition(async () => {
-      const classroom = await getClassroomByInviteCode(initialCode);
-      if (classroom) {
-        setPreview({ id: classroom.id, name: classroom.name, subject: classroom.subject });
-      }
-    });
-  }, [initialCode]);
-
-  const lookupClassroom = () => {
-    const code = parseInviteCodeFromInput(input);
-    if (!code) {
-      toast.error("Enter a valid invite link or code");
-      return;
-    }
-
-    startTransition(async () => {
-      const classroom = await getClassroomByInviteCode(code);
-      if (!classroom) {
-        setPreview(null);
-        toast.error("Classroom not found. Check the link with your teacher.");
-        return;
-      }
-      setPreview({
-        id: classroom.id,
-        name: classroom.name,
-        subject: classroom.subject,
-      });
-      toast.success(`Found: ${classroom.name}`);
-    });
+  const loginHref = (parsed?: string) => {
+    const c = parsed ?? initialCode;
+    return c
+      ? `${routes.login}?code=${encodeURIComponent(c)}`
+      : routes.login;
   };
 
-  const handleJoin = () => {
-    if (!preview) {
-      lookupClassroom();
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const parsed = parseInviteCodeFromInput(code);
+    if (!parsed) {
+      toast.error("Enter a valid classroom code or invite link");
       return;
     }
-    const code = parseInviteCodeFromInput(input) ?? initialCode;
-    const onboardingHref = code
-      ? `${routes.onboarding}?code=${encodeURIComponent(code)}`
-      : routes.onboarding;
-    const loginHref = code
-      ? `${routes.login}?code=${encodeURIComponent(code)}&redirect=${encodeURIComponent(onboardingHref)}`
-      : routes.login;
-    // TODO: enroll member when auth session exists; until then route via sign-in
-    router.push(loginHref);
+
+    // UI-only: enrollment logic will be wired later
+    toast.info("Join enrollment will connect when auth is wired");
+    const onboardingHref = `${routes.onboarding}?code=${encodeURIComponent(parsed)}`;
+    router.push(
+      `${routes.login}?code=${encodeURIComponent(parsed)}&redirect=${encodeURIComponent(onboardingHref)}`
+    );
   };
 
   return (
-    <div className="mx-auto w-full max-w-lg">
-      <div className="mb-8 text-center sm:text-left">
-        <h1 className="font-serif text-3xl font-bold text-[#191b23] sm:text-4xl">
-          Join a classroom
+    <div
+      className={`w-full max-w-[480px] rounded-xl border border-[#c3c6d7] bg-white p-6 md:p-8 ${cardShadow}`}
+    >
+      <div className="mb-6 flex flex-col items-center gap-2 text-center">
+        <div className="mb-2 flex size-16 items-center justify-center rounded-full bg-[#2563eb]/10">
+          <DoorOpen className="size-8 text-[#004ac6]" strokeWidth={1.75} />
+        </div>
+        <h1 className="text-2xl font-semibold tracking-tight text-[#191b23] md:text-[32px] md:leading-10">
+          Join a Classroom
         </h1>
-        <p className="mt-2 text-[#434655]">
-          Paste the invite link from your teacher or enter the short code.
+        <p className="text-base text-[#434655]">
+          Enter the unique code provided by your instructor to access course
+          materials.
         </p>
       </div>
 
-      <div className="rounded-xl border border-[#c3c6d7] bg-white p-6 shadow-sm">
-        <label
-          htmlFor="invite"
-          className="mb-1 block text-sm font-medium text-[#434655]"
-        >
-          Invite link or code
-        </label>
-        <input
-          id="invite"
-          className={inputClass}
-          placeholder="https://…/join/c/9x2a-b4zq or 9x2a-b4zq"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && lookupClassroom()}
-        />
-
-        {preview && (
-          <div className="mt-4 rounded-lg border border-[#004ac6]/20 bg-[#dbe1ff]/40 p-4">
-            <p className="text-sm font-medium text-[#004ac6]">Classroom found</p>
-            <p className="mt-1 text-lg font-semibold text-[#191b23]">{preview.name}</p>
-            {preview.subject && (
-              <p className="text-sm text-[#505f76]">{preview.subject}</p>
-            )}
-          </div>
-        )}
-
-        <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-          <button
-            type="button"
-            disabled={isPending}
-            onClick={lookupClassroom}
-            className={cn(
-              "flex-1 rounded-lg border border-[#c3c6d7] px-4 py-2.5 text-sm font-medium text-[#434655] hover:bg-[#f3f3fe] disabled:opacity-60"
-            )}
+      <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+        <div className="flex flex-col gap-1">
+          <label
+            htmlFor="classroom-code"
+            className="text-sm font-medium text-[#191b23]"
           >
-            {isPending ? "Looking up…" : "Verify invite"}
-          </button>
-          <button
-            type="button"
-            disabled={isPending}
-            onClick={handleJoin}
-            className="flex-1 rounded-lg bg-[#2563eb] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#004ac6] disabled:opacity-60"
-          >
-            Join classroom
-          </button>
+            Classroom Code
+          </label>
+          <input
+            id="classroom-code"
+            type="text"
+            className={inputClass}
+            placeholder="e.g., MATH101-FA23"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            autoComplete="off"
+            spellCheck={false}
+          />
         </div>
 
-          <p className="mt-4 text-center text-sm text-[#505f76]">
-          <Link
-            href={
-              initialCode
-                ? `${routes.login}?code=${encodeURIComponent(initialCode)}`
-                : routes.login
-            }
-            className="font-medium text-[#004ac6]"
-          >
-            Sign in
-          </Link>{" "}
-          or{" "}
-          <Link
-            href={
-              initialCode
-                ? `${routes.register}?code=${encodeURIComponent(initialCode)}`
-                : routes.register
-            }
-            className="font-medium text-[#004ac6]"
-          >
-            register
-          </Link>{" "}
-          to save your enrollment.
-        </p>
+        <div className="flex gap-3 rounded-lg border border-[#c3c6d7] bg-[#f3f3fe] p-4">
+          <HelpCircle className="mt-0.5 size-5 shrink-0 text-[#505f76]" />
+          <div className="flex flex-col gap-1">
+            <span className="text-sm font-medium text-[#191b23]">
+              Need help finding your code?
+            </span>
+            <p className="text-sm text-[#434655]">
+              Your instructor should have sent this via email or printed it on
+              your syllabus. It is typically 6-8 alphanumeric characters.
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-[#2563eb] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#004ac6]"
+        >
+          Join Class
+          <ArrowRight className="size-[18px]" />
+        </button>
+      </form>
+
+      <div className="mt-4 border-t border-[#c3c6d7] pt-4 text-center">
+        <Link
+          href={loginHref(parseInviteCodeFromInput(code) ?? undefined)}
+          className="text-sm font-medium text-[#004ac6] hover:underline"
+        >
+          Sign in with a different account
+        </Link>
       </div>
     </div>
   );

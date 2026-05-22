@@ -1,6 +1,6 @@
-import { JoinClassroomForm } from "@/components/join/join-classroom-form";
+import { JoinClassroomView } from "@/components/join/join-classroom-view";
 
-export const metadata = { title: "Join classroom" };
+export const metadata = { title: "Join a Classroom" };
 
 export default async function JoinClassroomPage({
   searchParams,
@@ -9,9 +9,5 @@ export default async function JoinClassroomPage({
 }) {
   const { code } = await searchParams;
 
-  return (
-    <div className="min-h-screen bg-[#faf8ff] px-4 py-12">
-      <JoinClassroomForm initialCode={code} />
-    </div>
-  );
+  return <JoinClassroomView initialCode={code} />;
 }
