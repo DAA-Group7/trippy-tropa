@@ -11,6 +11,7 @@ import {
   School,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { BrandMark } from "@/components/brand/brand-mark";
 import { OFFICER_AVATAR_URL } from "@/lib/constants/classroom-images";
 import { routes } from "@/lib/constants/routes";
 import { Button } from "@/components/ui/button";
@@ -118,9 +119,8 @@ export function OfficerShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen bg-[#faf8ff] text-[#191b23]">
       <aside className="fixed left-0 z-20 hidden h-full w-64 flex-col border-r border-[#c3c6d7] bg-white py-6 md:flex">
-        <div className="mb-8 px-6">
-          <h1 className="text-xl font-bold text-[#004ac6]">Smart Collaborative</h1>
-          <p className="mt-0.5 text-sm text-[#505f76]">Academic Portal</p>
+        <div className="mb-8 px-4">
+          <BrandMark size="md" href={routes.officer.dashboard} showTagline />
         </div>
         <div className="flex-1">
           <NavLinks pathname={pathname} />
@@ -133,7 +133,7 @@ export function OfficerShell({ children }: { children: React.ReactNode }) {
       <div className="flex min-h-screen flex-1 flex-col md:ml-64">
         {!isDashboard && (
           <header className="flex h-16 shrink-0 items-center justify-between border-b border-[#c3c6d7] bg-white px-4 md:hidden">
-            <h1 className="text-lg font-bold text-[#004ac6]">Smart Collaborative</h1>
+            <BrandMark size="sm" showTagline={false} />
             <Sheet>
               <SheetTrigger
                 render={
@@ -144,7 +144,7 @@ export function OfficerShell({ children }: { children: React.ReactNode }) {
               />
               <SheetContent side="left" className="w-72 p-0">
                 <SheetHeader className="border-b px-4 py-4 text-left">
-                  <SheetTitle>Academic Portal</SheetTitle>
+                  <SheetTitle>Menu</SheetTitle>
                 </SheetHeader>
                 <div className="py-4">
                   <NavLinks pathname={pathname} />

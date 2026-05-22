@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { buildJoinUrl } from "@/lib/invite";
+import { APP_NAME } from "@/lib/constants/brand";
 import { routes } from "@/lib/constants/routes";
 import { cn } from "@/lib/utils";
 
@@ -86,8 +87,8 @@ export function AuthCard({ mode, inviteCode, redirect }: AuthCardProps) {
       )}
     >
       <div className="px-6 pb-4 pt-8 text-center md:px-8 md:pt-10">
-        <h1 className="text-2xl font-semibold tracking-tight text-[#004ac6] sm:text-3xl">
-          Smart Collaborative
+        <h1 className="font-heading text-2xl font-semibold tracking-tight text-[#004ac6] sm:text-3xl">
+          {APP_NAME}
         </h1>
         <p className="mt-1 text-base text-[#434655]">
           {isLogin

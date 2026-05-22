@@ -157,7 +157,7 @@ export function ClassroomDetailView({
                   {codeTag}
                 </span>
               </div>
-              <h1 className="font-serif text-4xl font-bold tracking-tight text-[#191b23] sm:text-5xl">
+              <h1 className="font-heading text-4xl font-bold tracking-tight text-[#191b23] sm:text-5xl">
                 {name}
               </h1>
               <p className="mt-2 text-lg text-[#434655]">

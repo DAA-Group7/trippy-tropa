@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -10,7 +9,7 @@ import {
   School,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { INSTITUTION_LOGO_URL } from "@/lib/constants/student-dashboard-demo";
+import { BrandMark } from "@/components/brand/brand-mark";
 import { routes } from "@/lib/constants/routes";
 
 const navItems = [
@@ -88,23 +87,12 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen bg-[#faf8ff] text-[#191b23]">
       <aside className="fixed left-0 z-40 hidden h-full w-64 flex-col border-r border-[#c3c6d7] bg-white py-6 md:flex">
-        <div className="mb-10 flex items-center gap-4 px-4">
-          <Image
-            src={INSTITUTION_LOGO_URL}
-            alt=""
-            width={40}
-            height={40}
-            className="size-10 rounded-full object-cover"
-            unoptimized
+        <div className="mb-10 px-4">
+          <BrandMark
+            size="md"
+            href={routes.student.dashboard}
+            showTagline
           />
-          <div>
-            <h1 className="text-lg font-semibold leading-tight text-[#004ac6]">
-              Management System
-            </h1>
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#434655]">
-              Academic Portal
-            </p>
-          </div>
         </div>
         <NavLinks pathname={pathname} />
       </aside>

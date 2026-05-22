@@ -80,13 +80,13 @@ export function CreateClassroomView() {
   };
 
   const messengerMessage = inviteUrl
-    ? `Join our class on CollabClass:\n${inviteUrl}`
+    ? `Join our class on Trippy-Tropa:\n${inviteUrl}`
     : "";
 
   return (
     <div className="mx-auto w-full max-w-[1280px]">
       <div className="mb-6 sm:mb-8">
-        <h1 className="font-serif text-4xl font-bold tracking-tight text-[#191b23] sm:text-5xl">
+        <h1 className="font-heading text-4xl font-bold tracking-tight text-[#191b23] sm:text-5xl">
           Create Classroom
         </h1>
         <p className="mt-3 max-w-[720px] text-lg text-[#434655]">

@@ -1,4 +1,4 @@
-export const APP_NAME = "CollabClass";
+export { APP_NAME, APP_TAGLINE } from "@/lib/constants/brand";
 
 export const routes = {
   home: "/",

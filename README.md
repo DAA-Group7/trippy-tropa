@@ -1,6 +1,6 @@
-# CollabClass
+# Trippy-Tropa
 
-Smart Collaborative Group Management System for academic group work. Web-only, fully responsive (desktop + mobile browsers).
+Group work, balanced and on track — a web-based platform for teachers and students to form skill-balanced groups, assign tasks, and collaborate. Fully responsive (desktop + mobile browsers).
 
 ## Stack
 

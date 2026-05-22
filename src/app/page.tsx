@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { GraduationCap, Users, LayoutDashboard } from "lucide-react";
+import { Users, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -8,18 +8,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { APP_NAME, routes } from "@/lib/constants/routes";
+import { BrandMark } from "@/components/brand/brand-mark";
+import { APP_TAGLINE } from "@/lib/constants/brand";
+import { routes } from "@/lib/constants/routes";
 
 export default function HomePage() {
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-b from-background to-secondary/40">
       <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-6 sm:px-6">
-        <div className="flex items-center gap-2">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-            <GraduationCap className="size-5" />
-          </div>
-          <span className="text-lg font-semibold">{APP_NAME}</span>
-        </div>
+        <BrandMark size="md" href={routes.home} showTagline={false} />
         <div className="flex gap-2">
           <Button variant="ghost" render={<Link href={routes.login} />}>
             Log in
@@ -30,9 +27,9 @@ export default function HomePage() {
 
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col items-center px-4 pb-16 pt-8 text-center sm:px-6 sm:pt-16">
         <p className="rounded-full border border-primary/20 bg-primary/5 px-4 py-1 text-sm font-medium text-primary">
-          Smart academic group collaboration
+          {APP_TAGLINE}
         </p>
-        <h1 className="mt-6 max-w-3xl text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
+        <h1 className="mt-6 max-w-3xl font-heading text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
           Balanced groups. Optimized tasks. Better teamwork.
         </h1>
         <p className="mt-4 max-w-2xl text-lg text-muted-foreground">

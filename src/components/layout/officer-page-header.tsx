@@ -1,13 +1,12 @@
 "use client";
 
 import { Bell, UserCircle } from "lucide-react";
+import { BrandTitle } from "@/components/brand/brand-mark";
 
 export function OfficerPageHeader() {
   return (
     <header className="flex h-16 shrink-0 items-center justify-between border-b border-[#c3c6d7] bg-white px-4 md:px-6">
-      <h2 className="text-lg font-bold text-[#004ac6] md:hidden">
-        Smart Collaborative
-      </h2>
+      <BrandTitle className="text-lg md:hidden" />
       <div className="hidden md:block" />
       <div className="flex items-center gap-1">
         <button

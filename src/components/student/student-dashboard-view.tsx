@@ -22,6 +22,7 @@ import {
   DEMO_UPDATES,
   STUDENT_PROFILE,
 } from "@/lib/constants/student-dashboard-demo";
+import { BrandTitle } from "@/components/brand/brand-mark";
 import { routes } from "@/lib/constants/routes";
 import { cn } from "@/lib/utils";
 
@@ -69,9 +70,7 @@ export function StudentDashboardView() {
         <span className="text-sm font-medium text-[#434655] md:block">
           Dashboard Overview
         </span>
-        <span className="text-lg font-bold text-[#004ac6] md:hidden">
-          Smart Collaborative
-        </span>
+        <BrandTitle className="text-lg md:hidden" />
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -102,7 +101,7 @@ export function StudentDashboardView() {
       <div className="mx-auto flex w-full max-w-[1280px] flex-1 flex-col gap-6 p-4 md:gap-8 md:p-6 lg:p-8">
         <section className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight text-[#191b23] sm:text-4xl md:text-5xl">
+            <h2 className="font-heading text-3xl font-bold tracking-tight text-[#191b23] sm:text-4xl md:text-5xl">
               Welcome back, {STUDENT_PROFILE.firstName}.
             </h2>
             <p className="mt-1 text-lg text-[#434655]">

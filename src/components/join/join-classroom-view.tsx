@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, UserCircle } from "lucide-react";
+import { BrandTitle } from "@/components/brand/brand-mark";
 import { JoinClassroomForm } from "@/components/join/join-classroom-form";
 import { routes } from "@/lib/constants/routes";
 
@@ -29,9 +30,7 @@ export function JoinClassroomView({ initialCode }: JoinClassroomViewProps) {
           >
             <ArrowLeft className="size-5" />
           </button>
-          <span className="text-lg font-bold text-[#004ac6]">
-            Smart Collaborative
-          </span>
+          <BrandTitle className="text-lg" />
         </div>
         <Link
           href={loginHref}
