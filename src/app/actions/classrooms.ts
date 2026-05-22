@@ -42,6 +42,39 @@ export type OfficerDashboardData = {
   };
 };
 
+export type ClassroomBrief = {
+  id: string;
+  name: string;
+  inviteCode: string;
+  inviteUrl: string;
+};
+
+export async function getClassroomBrief(
+  id: string
+): Promise<ClassroomBrief | null> {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("classrooms")
+      .select("id, name, invite_code")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (error || !data) return null;
+
+    return {
+      id: data.id,
+      name: data.name,
+      inviteCode: data.invite_code,
+      inviteUrl: buildJoinUrl(data.invite_code, baseUrl),
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function getOfficerDashboardData(): Promise<OfficerDashboardData> {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const empty: OfficerDashboardData = {
