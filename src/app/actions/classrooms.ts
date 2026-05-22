@@ -49,26 +49,51 @@ export type ClassroomBrief = {
   inviteUrl: string;
 };
 
+export type ClassroomDetail = ClassroomBrief & {
+  subject: string | null;
+  enrolledCount: number;
+};
+
 export async function getClassroomBrief(
   id: string
 ): Promise<ClassroomBrief | null> {
+  const detail = await getClassroomDetail(id);
+  if (!detail) return null;
+  return {
+    id: detail.id,
+    name: detail.name,
+    inviteCode: detail.inviteCode,
+    inviteUrl: detail.inviteUrl,
+  };
+}
+
+export async function getClassroomDetail(
+  id: string
+): Promise<ClassroomDetail | null> {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
   try {
     const supabase = await createClient();
     const { data, error } = await supabase
       .from("classrooms")
-      .select("id, name, invite_code")
+      .select("id, name, subject, invite_code")
       .eq("id", id)
       .maybeSingle();
 
     if (error || !data) return null;
 
+    const { count } = await supabase
+      .from("classroom_members")
+      .select("*", { count: "exact", head: true })
+      .eq("classroom_id", id);
+
     return {
       id: data.id,
       name: data.name,
+      subject: data.subject,
       inviteCode: data.invite_code,
       inviteUrl: buildJoinUrl(data.invite_code, baseUrl),
+      enrolledCount: count ?? 0,
     };
   } catch {
     return null;
