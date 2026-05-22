@@ -1,6 +1,5 @@
-import Link from "next/link";
 import { Users, LayoutDashboard } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ButtonLink } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -18,10 +17,10 @@ export default function HomePage() {
       <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-6 sm:px-6">
         <BrandMark size="md" href={routes.home} showTagline={false} />
         <div className="flex gap-2">
-          <Button variant="ghost" render={<Link href={routes.login} />}>
+          <ButtonLink href={routes.login} variant="ghost">
             Log in
-          </Button>
-          <Button render={<Link href={routes.register} />}>Get started</Button>
+          </ButtonLink>
+          <ButtonLink href={routes.register}>Get started</ButtonLink>
         </div>
       </header>
 
@@ -50,9 +49,9 @@ export default function HomePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button className="w-full" render={<Link href={routes.officer.dashboard} />}>
+              <ButtonLink href={routes.officer.dashboard} className="w-full">
                 Open officer portal
-              </Button>
+              </ButtonLink>
             </CardContent>
           </Card>
 
@@ -68,12 +67,16 @@ export default function HomePage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-2">
-              <Button className="w-full" render={<Link href={routes.student.dashboard} />}>
+              <ButtonLink href={routes.student.dashboard} className="w-full">
                 Student dashboard
-              </Button>
-              <Button variant="outline" className="w-full" render={<Link href={routes.join} />}>
+              </ButtonLink>
+              <ButtonLink
+                href={routes.join}
+                variant="outline"
+                className="w-full"
+              >
                 Join with invite code
-              </Button>
+              </ButtonLink>
             </CardContent>
           </Card>
         </div>

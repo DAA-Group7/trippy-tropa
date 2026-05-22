@@ -1,5 +1,6 @@
 import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { cva, type VariantProps } from "class-variance-authority"
+import Link from "next/link"
 
 import { cn } from "@/lib/utils"
 
@@ -55,4 +56,27 @@ function Button({
   )
 }
 
-export { Button, buttonVariants }
+/** Next.js Link styled as Button — use instead of `render={<Link />}` */
+function ButtonLink({
+  href,
+  className,
+  variant = "default",
+  size = "default",
+  ...props
+}: ButtonPrimitive.Props &
+  VariantProps<typeof buttonVariants> & {
+    href: string
+  }) {
+  return (
+    <Button
+      nativeButton={false}
+      render={<Link href={href} />}
+      variant={variant}
+      size={size}
+      className={className}
+      {...props}
+    />
+  )
+}
+
+export { Button, ButtonLink, buttonVariants }
