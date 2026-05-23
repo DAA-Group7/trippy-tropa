@@ -12,6 +12,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import { toast } from "sonner";
+import { normalizeEmail, parseEmail } from "@/lib/auth/email";
 import { resolvePostAuthRedirect } from "@/lib/auth/join-flow";
 import { buildJoinUrl } from "@/lib/invite";
 import { APP_NAME } from "@/lib/constants/brand";
@@ -56,15 +57,29 @@ export function AuthCard({ mode, inviteCode, redirect }: AuthCardProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim() || !password) {
-      toast.error("Please enter your email and password");
+
+    const parsedEmail = parseEmail(email);
+    if (!parsedEmail.ok) {
+      toast.error(parsedEmail.error);
       return;
     }
+
+    if (!password) {
+      toast.error("Please enter your password");
+      return;
+    }
+
+    if (!isLogin && password.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+
     if (!isLogin && !fullName.trim()) {
       toast.error("Please enter your full name");
       return;
     }
 
+    const normalizedEmail = parsedEmail.email;
     const fallbackRedirect = inviteCode
       ? routes.joinByCode(inviteCode)
       : undefined;
@@ -75,7 +90,7 @@ export function AuthCard({ mode, inviteCode, redirect }: AuthCardProps) {
 
       if (isLogin) {
         const { data, error } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
+          email: normalizedEmail,
           password,
         });
 
@@ -111,7 +126,7 @@ export function AuthCard({ mode, inviteCode, redirect }: AuthCardProps) {
       }
 
       const { data, error } = await supabase.auth.signUp({
-        email: email.trim(),
+        email: normalizedEmail,
         password,
         options: {
           data: {
@@ -226,7 +241,11 @@ export function AuthCard({ mode, inviteCode, redirect }: AuthCardProps) {
       </div>
 
       <div className="px-6 pb-8 md:px-8">
-        <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+        <form
+          className="flex flex-col gap-4"
+          noValidate
+          onSubmit={handleSubmit}
+        >
           {!isLogin && (
             <div className="flex flex-col gap-1">
               <label
@@ -249,16 +268,21 @@ export function AuthCard({ mode, inviteCode, redirect }: AuthCardProps) {
 
           <div className="flex flex-col gap-1">
             <label htmlFor="email" className="text-sm font-medium text-[#191b23]">
-              Institutional Email
+              Email address
             </label>
             <input
               id="email"
-              type="email"
+              type="text"
+              inputMode="email"
               className={inputClass}
-              placeholder="researcher@university.edu"
+              placeholder="janedoe@gmail.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              onBlur={() => setEmail((value) => normalizeEmail(value))}
               autoComplete="email"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
             />
           </div>
 
