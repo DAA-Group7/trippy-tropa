@@ -3,18 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { QRCodeSVG } from "qrcode.react";
-import {
-  CheckCircle2,
-  Copy,
-  Link2,
-  Mail,
-  MessageSquare,
-  QrCode,
-  QrCodeIcon,
-} from "lucide-react";
+import { Copy, Link2, QrCodeIcon, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { createClassroom } from "@/app/actions/classrooms";
+import { ClassroomInviteQr } from "@/components/classrooms/classroom-invite-qr";
 import { routes } from "@/lib/constants/routes";
 import { cn } from "@/lib/utils";
 
@@ -42,19 +34,26 @@ export function CreateClassroomView() {
   const [maxGroups, setMaxGroups] = useState("5");
   const [rules, setRules] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showQr, setShowQr] = useState(false);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [inviteCode, setInviteCode] = useState<string | null>(null);
   const [classroomId, setClassroomId] = useState<string | null>(null);
+
+  const canGenerate = Boolean(name.trim()) && !isSubmitting;
+  const isGenerated = Boolean(inviteUrl);
 
   const copyToClipboard = async (text: string, message: string) => {
     await navigator.clipboard.writeText(text);
     toast.success(message);
   };
 
-  const handleFinalize = async () => {
+  const handleGenerateInviteLink = async () => {
     if (!name.trim()) {
-      toast.error("Please enter a class name");
+      toast.error("Please enter a class name first");
+      return;
+    }
+
+    if (isGenerated) {
+      await copyToClipboard(inviteUrl!, "Invite link copied");
       return;
     }
 
@@ -75,13 +74,8 @@ export function CreateClassroomView() {
     setInviteUrl(result.inviteUrl);
     setInviteCode(result.inviteCode);
     setClassroomId(result.classroomId);
-    setShowQr(true);
-    toast.success("Classroom created — share the invite link with students");
+    toast.success("Invite link ready — share it with your students");
   };
-
-  const messengerMessage = inviteUrl
-    ? `Join our class on Trippy-Tropa:\n${inviteUrl}`
-    : "";
 
   return (
     <div className="mx-auto w-full max-w-[1280px]">
@@ -96,7 +90,6 @@ export function CreateClassroomView() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-6">
-        {/* Left: form */}
         <div className="flex flex-col gap-6 lg:col-span-7">
           <div className={cardClass}>
             <div className="absolute left-0 top-0 h-1 w-full bg-[#004ac6]" />
@@ -117,6 +110,7 @@ export function CreateClassroomView() {
                   placeholder="e.g., Advanced Physics 301"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
+                  disabled={isGenerated}
                 />
               </div>
               <div>
@@ -131,6 +125,7 @@ export function CreateClassroomView() {
                   className={cn(inputClass, "appearance-none")}
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
+                  disabled={isGenerated}
                 >
                   {SUBJECTS.map((s) => (
                     <option key={s.value} value={s.value} disabled={!s.value}>
@@ -163,6 +158,7 @@ export function CreateClassroomView() {
                   placeholder="e.g., 5"
                   value={maxGroups}
                   onChange={(e) => setMaxGroups(e.target.value)}
+                  disabled={isGenerated}
                 />
                 <p className="mt-1 text-sm text-[#505f76]">
                   Limit the number of sub-groups allowed for collaborative
@@ -183,43 +179,51 @@ export function CreateClassroomView() {
                   placeholder="Outline specific expectations, syllabus notes, or behavioral guidelines..."
                   value={rules}
                   onChange={(e) => setRules(e.target.value)}
+                  disabled={isGenerated}
                 />
               </div>
             </div>
           </div>
 
-          <div className="flex justify-end gap-3">
+          <div className="flex justify-end">
             <Link
               href={routes.officer.dashboard}
               className="rounded-lg border border-[#c3c6d7] px-6 py-2.5 text-sm font-medium text-[#434655] transition-colors hover:bg-[#e7e7f3]"
             >
-              Cancel
+              {isGenerated ? "Back to dashboard" : "Cancel"}
             </Link>
-            <button
-              type="button"
-              disabled={isSubmitting}
-              onClick={() => void handleFinalize()}
-              className="flex items-center gap-2 rounded-lg bg-[#2563eb] px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#004ac6] disabled:opacity-60"
-            >
-              <CheckCircle2 className="size-[18px]" />
-              {isSubmitting ? "Creating…" : "Finalize Classroom"}
-            </button>
           </div>
         </div>
 
-        {/* Right: sharing */}
         <div className="flex flex-col gap-6 lg:col-span-5">
           <div className={cardClass}>
+            <div className="absolute left-0 top-0 h-1 w-full bg-[#004ac6]" />
             <div className="mb-2 flex items-center gap-2">
               <Link2 className="size-5 text-[#004ac6]" />
               <h3 className="text-xl font-semibold text-[#191b23]">
                 Secure Invite Link
               </h3>
             </div>
-            <p className="mb-3 text-sm text-[#505f76]">
-              Share this link with students. They sign in (or register), complete
-              skill assessment if new, then join automatically.
+            <p className="mb-4 text-sm text-[#505f76]">
+              {isGenerated
+                ? "Share this link with students. They sign in, complete skill assessment if new, then join automatically."
+                : "Fill in the classroom details on the left, then generate your student join link below."}
             </p>
+
+            <button
+              type="button"
+              disabled={!canGenerate && !isGenerated}
+              onClick={() => void handleGenerateInviteLink()}
+              className="mb-4 flex w-full items-center justify-center gap-2 rounded-lg bg-[#2563eb] px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#004ac6] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Sparkles className="size-[18px]" />
+              {isSubmitting
+                ? "Generating…"
+                : isGenerated
+                  ? "Copy invite link"
+                  : "Generate invite link"}
+            </button>
+
             <div
               className={cn(
                 "flex overflow-hidden rounded-lg border border-[#c3c6d7] transition-all focus-within:border-[#004ac6] focus-within:ring-1 focus-within:ring-[#004ac6]",
@@ -232,7 +236,7 @@ export function CreateClassroomView() {
                 className="min-w-0 flex-1 truncate border-0 bg-[#faf8ff] px-4 py-2.5 text-sm text-[#434655] focus:outline-none"
                 value={
                   inviteUrl ??
-                  "Finalize classroom to generate your student join link"
+                  "Your join link will appear here after you generate it"
                 }
               />
               <button
@@ -259,71 +263,24 @@ export function CreateClassroomView() {
 
           <div className={cn(cardClass, "flex flex-col items-center")}>
             <h3 className="w-full text-left text-xl font-semibold text-[#191b23]">
-              Generate Access QR
+              Access QR Code
             </h3>
             <p className="mb-4 w-full text-left text-sm text-[#505f76]">
-              Project this code in the lecture hall for instant onboarding.
+              {inviteUrl
+                ? "Download or copy the QR image for slides, posters, or printed handouts."
+                : "Generate your invite link first to create the classroom QR code."}
             </p>
-            <div className="relative flex size-48 items-center justify-center overflow-hidden rounded-lg border border-[#c3c6d7] bg-[#f3f3fe] shadow-inner">
-              {showQr && inviteUrl ? (
-                <QRCodeSVG value={inviteUrl} size={176} level="M" />
-              ) : (
+            {inviteUrl && inviteCode ? (
+              <ClassroomInviteQr
+                inviteUrl={inviteUrl}
+                inviteCode={inviteCode}
+                classroomName={name.trim() || undefined}
+              />
+            ) : (
+              <div className="flex size-48 items-center justify-center rounded-lg border border-dashed border-[#c3c6d7] bg-[#f3f3fe]">
                 <QrCodeIcon className="size-16 text-[#c3c6d7]" />
-              )}
-            </div>
-            <button
-              type="button"
-              disabled={!inviteUrl}
-              onClick={() => setShowQr(true)}
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-[#d0e1fb] px-6 py-2.5 text-sm font-medium text-[#54647a] transition-colors hover:bg-[#505f76] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <QrCode className="size-[18px]" />
-              {inviteUrl ? "Show QR Code" : "Generate QR Code"}
-            </button>
-          </div>
-
-          <div className={cardClass}>
-            <h3 className="text-xl font-semibold text-[#191b23]">
-              External Distribution
-            </h3>
-            <p className="mb-4 text-sm text-[#505f76]">
-              Send invitations via integrated institutional channels.
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                disabled={!inviteUrl}
-                onClick={() =>
-                  inviteUrl &&
-                  void copyToClipboard(
-                    `Subject: Join our class\n\n${inviteUrl}`,
-                    "Email draft copied to clipboard"
-                  )
-                }
-                className="flex flex-col items-center justify-center gap-2 rounded-lg border border-[#c3c6d7] bg-[#faf8ff] py-4 transition-colors hover:bg-[#e7e7f3] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <Mail className="size-6 text-[#004ac6]" />
-                <span className="text-xs font-semibold uppercase tracking-wide text-[#191b23]">
-                  Institutional Email
-                </span>
-              </button>
-              <button
-                type="button"
-                disabled={!messengerMessage}
-                onClick={() =>
-                  void copyToClipboard(
-                    messengerMessage,
-                    "Messenger-ready message copied"
-                  )
-                }
-                className="flex flex-col items-center justify-center gap-2 rounded-lg border border-[#c3c6d7] bg-[#faf8ff] py-4 transition-colors hover:bg-[#e7e7f3] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <MessageSquare className="size-6 text-[#004ac6]" />
-                <span className="text-xs font-semibold uppercase tracking-wide text-[#191b23]">
-                  Messenger Group
-                </span>
-              </button>
-            </div>
+              </div>
+            )}
           </div>
 
           {classroomId && (
