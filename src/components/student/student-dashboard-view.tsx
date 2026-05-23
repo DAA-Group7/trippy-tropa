@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowRight,
   Clock,
@@ -25,6 +25,7 @@ import {
   STUDENT_PROFILE,
 } from "@/lib/constants/student-dashboard-demo";
 import { BrandTitle } from "@/components/brand/brand-mark";
+import { SignOutButton } from "@/components/auth/sign-out-button";
 import { routes } from "@/lib/constants/routes";
 import { cn } from "@/lib/utils";
 
@@ -65,17 +66,23 @@ function UpdateIcon({ type }: { type: "group" | "warning" | "forum" }) {
 
 export function StudentDashboardView() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const assignmentsDue = 3;
 
   useEffect(() => {
     const joined = searchParams.get("joined");
     const classroom = searchParams.get("classroom");
-    if (joined === "new" && classroom) {
-      toast.success(`You joined ${decodeURIComponent(classroom)}`);
-    } else if (joined === "already" && classroom) {
-      toast.info(`You’re already in ${decodeURIComponent(classroom)}`);
+    if (!joined || !classroom) return;
+
+    const name = decodeURIComponent(classroom);
+    if (joined === "new") {
+      toast.success(`You joined ${name}`);
+    } else if (joined === "already") {
+      toast.info(`You’re already in ${name}`);
     }
-  }, [searchParams]);
+
+    router.replace(routes.student.dashboard, { scroll: false });
+  }, [searchParams, router]);
 
   return (
     <div className="flex flex-1 flex-col">
@@ -92,6 +99,9 @@ export function StudentDashboardView() {
           >
             <Search className="size-5" />
           </button>
+          <div className="md:hidden">
+            <SignOutButton variant="compact" />
+          </div>
           <button
             type="button"
             className="relative rounded-full p-2 text-[#004ac6] transition-colors hover:bg-[#e7e7f3]"

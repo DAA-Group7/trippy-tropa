@@ -115,7 +115,6 @@ function OfficerProfile() {
 
 export function OfficerShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isDashboard = pathname === routes.officer.dashboard;
 
   return (
     <div className="flex min-h-screen bg-[#faf8ff] text-[#191b23]">
@@ -133,10 +132,9 @@ export function OfficerShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       <div className="flex min-h-screen flex-1 flex-col md:ml-64">
-        {!isDashboard && (
-          <header className="flex h-16 shrink-0 items-center justify-between border-b border-[#c3c6d7] bg-white px-4 md:hidden">
-            <BrandMark size="sm" showTagline={false} />
-            <Sheet>
+        <header className="flex h-16 shrink-0 items-center justify-between border-b border-[#c3c6d7] bg-white px-4 md:hidden">
+          <BrandMark size="sm" showTagline={false} />
+          <Sheet>
               <SheetTrigger
                 render={
                   <Button variant="outline" size="icon" aria-label="Open menu">
@@ -157,8 +155,7 @@ export function OfficerShell({ children }: { children: React.ReactNode }) {
                 </div>
               </SheetContent>
             </Sheet>
-          </header>
-        )}
+        </header>
 
         <div className="flex flex-1 flex-col pb-20 md:pb-0">{children}</div>
 

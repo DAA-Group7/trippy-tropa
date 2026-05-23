@@ -84,6 +84,7 @@ function NavLinks({
 
 export function StudentShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const isDashboard = pathname === routes.student.dashboard;
 
   return (
     <div className="flex min-h-screen bg-[#faf8ff] text-[#191b23]">
@@ -104,6 +105,12 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       <div className="flex min-h-screen flex-1 flex-col md:ml-64">
+        {!isDashboard && (
+          <header className="flex h-14 shrink-0 items-center justify-between border-b border-[#c3c6d7] bg-white px-4 md:hidden">
+            <BrandMark size="sm" href={routes.student.dashboard} showTagline={false} />
+            <SignOutButton variant="compact" />
+          </header>
+        )}
         <div className="flex flex-1 flex-col pb-20 md:pb-0">{children}</div>
 
         <nav className="fixed bottom-0 left-0 z-50 flex w-full items-center justify-around border-t border-[#c3c6d7] bg-white/90 px-4 py-2 backdrop-blur-md md:hidden">
