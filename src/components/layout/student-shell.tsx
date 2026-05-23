@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BrandMark } from "@/components/brand/brand-mark";
+import { SignOutButton } from "@/components/auth/sign-out-button";
 import { routes } from "@/lib/constants/routes";
 
 const navItems = [
@@ -94,7 +95,12 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
             showTagline
           />
         </div>
-        <NavLinks pathname={pathname} />
+        <div className="flex flex-1 flex-col">
+          <NavLinks pathname={pathname} />
+        </div>
+        <div className="mt-auto px-4 pb-4">
+          <SignOutButton />
+        </div>
       </aside>
 
       <div className="flex min-h-screen flex-1 flex-col md:ml-64">

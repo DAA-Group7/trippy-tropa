@@ -65,20 +65,3 @@ export function redirectForForbiddenPath(
 ): string {
   return roleHomePath(role, skillsCompleted);
 }
-
-/** Where to send the user after login/register */
-export function resolvePostAuthRedirect(
-  role: UserRole,
-  skillsCompleted: boolean,
-  requested?: string
-): string {
-  if (
-    requested &&
-    requested.startsWith("/") &&
-    !requested.startsWith("//") &&
-    canAccessPath(role, requested, skillsCompleted)
-  ) {
-    return requested;
-  }
-  return roleHomePath(role, skillsCompleted);
-}

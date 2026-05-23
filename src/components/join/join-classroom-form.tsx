@@ -1,12 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, DoorOpen, HelpCircle } from "lucide-react";
 import { toast } from "sonner";
+import {
+  getClassroomByInviteCode,
+  processJoinInvite,
+  type ClassroomPreview,
+} from "@/app/actions/join-classroom";
+import { ClassroomPreviewCard } from "@/components/join/classroom-preview-card";
+import { loginWithInvite, registerWithInvite } from "@/lib/auth/join-flow";
 import { parseInviteCodeFromInput } from "@/lib/invite";
-import { routes } from "@/lib/constants/routes";
 
 const inputClass =
   "w-full rounded-lg border border-[#c3c6d7] bg-[#faf8ff] px-4 py-3 text-base text-[#191b23] transition-colors placeholder:text-[#737686] focus:border-[#004ac6] focus:outline-none focus:ring-1 focus:ring-[#004ac6]";
@@ -16,34 +22,88 @@ const cardShadow =
 
 interface JoinClassroomFormProps {
   initialCode?: string;
+  initialPreview?: ClassroomPreview | null;
+  serverError?: string;
 }
 
-export function JoinClassroomForm({ initialCode }: JoinClassroomFormProps) {
+export function JoinClassroomForm({
+  initialCode,
+  initialPreview = null,
+  serverError,
+}: JoinClassroomFormProps) {
   const router = useRouter();
   const [code, setCode] = useState(initialCode ?? "");
+  const [preview, setPreview] = useState<ClassroomPreview | null>(
+    initialPreview
+  );
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   const loginHref = (parsed?: string) => {
-    const c = parsed ?? initialCode;
-    return c
-      ? `${routes.login}?code=${encodeURIComponent(c)}`
-      : routes.login;
+    const c = parsed ?? parseInviteCodeFromInput(code) ?? initialCode;
+    return c ? loginWithInvite(c) : routes.login;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const parsed = parseInviteCodeFromInput(code);
+  useEffect(() => {
+    if (serverError) {
+      toast.error(serverError);
+    }
+  }, [serverError]);
+
+  const loadPreview = useCallback(async (raw: string) => {
+    const parsed = parseInviteCodeFromInput(raw);
     if (!parsed) {
-      toast.error("Enter a valid classroom code or invite link");
+      setPreview(null);
       return;
     }
 
-    // UI-only: enrollment logic will be wired later
-    toast.info("Join enrollment will connect when auth is wired");
-    const onboardingHref = `${routes.onboarding}?code=${encodeURIComponent(parsed)}`;
-    router.push(
-      `${routes.login}?code=${encodeURIComponent(parsed)}&redirect=${encodeURIComponent(onboardingHref)}`
-    );
+    setPreviewLoading(true);
+    try {
+      const classroom = await getClassroomByInviteCode(parsed);
+      setPreview(classroom);
+    } finally {
+      setPreviewLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const parsed = parseInviteCodeFromInput(code);
+    if (!parsed) {
+      setPreview(null);
+      return;
+    }
+
+    if (
+      initialPreview &&
+      initialPreview.inviteCode.toLowerCase() === parsed.toLowerCase()
+    ) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      void loadPreview(code);
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [code, initialPreview, loadPreview]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    startTransition(async () => {
+      const result = await processJoinInvite(code);
+
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+
+      router.push(result.redirectTo);
+      router.refresh();
+    });
   };
+
+  const parsedCode = parseInviteCodeFromInput(code);
 
   return (
     <div
@@ -82,6 +142,18 @@ export function JoinClassroomForm({ initialCode }: JoinClassroomFormProps) {
           />
         </div>
 
+        {previewLoading && parsedCode && !preview && (
+          <p className="text-sm text-[#505f76]">Looking up classroom…</p>
+        )}
+
+        {preview && <ClassroomPreviewCard classroom={preview} />}
+
+        {parsedCode && !previewLoading && !preview && (
+          <p className="text-sm text-[#ba1a1a]">
+            No classroom found for this code. Check with your instructor.
+          </p>
+        )}
+
         <div className="flex gap-3 rounded-lg border border-[#c3c6d7] bg-[#f3f3fe] p-4">
           <HelpCircle className="mt-0.5 size-5 shrink-0 text-[#505f76]" />
           <div className="flex flex-col gap-1">
@@ -97,20 +169,38 @@ export function JoinClassroomForm({ initialCode }: JoinClassroomFormProps) {
 
         <button
           type="submit"
-          className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-[#2563eb] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#004ac6]"
+          disabled={isPending || !parsedCode}
+          className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-[#2563eb] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#004ac6] disabled:cursor-not-allowed disabled:opacity-60"
         >
-          Join Class
+          {isPending ? "Joining…" : "Join Class"}
           <ArrowRight className="size-[18px]" />
         </button>
       </form>
 
-      <div className="mt-4 border-t border-[#c3c6d7] pt-4 text-center">
-        <Link
-          href={loginHref(parseInviteCodeFromInput(code) ?? undefined)}
-          className="text-sm font-medium text-[#004ac6] hover:underline"
-        >
-          Sign in with a different account
-        </Link>
+      <div className="mt-4 space-y-2 border-t border-[#c3c6d7] pt-4 text-center">
+        {parsedCode ? (
+          <>
+            <Link
+              href={loginHref(parsedCode)}
+              className="block text-sm font-medium text-[#004ac6] hover:underline"
+            >
+              Sign in to join
+            </Link>
+            <Link
+              href={registerWithInvite(parsedCode)}
+              className="block text-sm text-[#505f76] hover:text-[#004ac6]"
+            >
+              Create a student account
+            </Link>
+          </>
+        ) : (
+          <Link
+            href={routes.login}
+            className="text-sm font-medium text-[#004ac6] hover:underline"
+          >
+            Sign in with a different account
+          </Link>
+        )}
       </div>
     </div>
   );

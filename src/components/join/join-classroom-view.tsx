@@ -3,19 +3,27 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, UserCircle } from "lucide-react";
+import type { ClassroomPreview } from "@/app/actions/join-classroom";
 import { BrandTitle } from "@/components/brand/brand-mark";
 import { JoinClassroomForm } from "@/components/join/join-classroom-form";
+import { loginWithInvite } from "@/lib/auth/join-flow";
 import { routes } from "@/lib/constants/routes";
 
 interface JoinClassroomViewProps {
   initialCode?: string;
+  classroom?: ClassroomPreview | null;
+  error?: string;
 }
 
-export function JoinClassroomView({ initialCode }: JoinClassroomViewProps) {
+export function JoinClassroomView({
+  initialCode,
+  classroom = null,
+  error,
+}: JoinClassroomViewProps) {
   const router = useRouter();
 
   const loginHref = initialCode
-    ? `${routes.login}?code=${encodeURIComponent(initialCode)}`
+    ? loginWithInvite(initialCode)
     : routes.login;
 
   return (
@@ -42,7 +50,11 @@ export function JoinClassroomView({ initialCode }: JoinClassroomViewProps) {
       </header>
 
       <main className="flex flex-1 items-center justify-center p-4 md:p-6">
-        <JoinClassroomForm initialCode={initialCode} />
+        <JoinClassroomForm
+          initialCode={initialCode}
+          initialPreview={classroom}
+          serverError={error}
+        />
       </main>
     </div>
   );

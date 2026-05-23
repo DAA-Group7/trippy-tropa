@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Info, Link2 } from "lucide-react";
 import { toast } from "sonner";
+import { completeSkillAssessment } from "@/app/actions/join-classroom";
 import {
   ONBOARDING_STEPS,
   RATING_OPTIONS,
@@ -135,6 +136,7 @@ export function SkillAssessmentView({ inviteCode }: SkillAssessmentViewProps) {
   const [wizardStep, setWizardStep] = useState(1);
   const [ratings, setRatings] =
     useState<Record<SkillKey, number>>(DEFAULT_RATINGS);
+  const [isPending, startTransition] = useTransition();
 
   const joinUrl = inviteCode ? buildJoinUrl(inviteCode) : null;
 
@@ -148,11 +150,22 @@ export function SkillAssessmentView({ inviteCode }: SkillAssessmentViewProps) {
       return;
     }
 
-    toast.success("Assessment saved — join flow continues when wired");
-    const destination = inviteCode
-      ? routes.joinByCode(inviteCode)
-      : routes.student.dashboard;
-    router.push(destination);
+    startTransition(async () => {
+      const result = await completeSkillAssessment(ratings, inviteCode);
+
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+
+      toast.success(
+        inviteCode
+          ? "Assessment saved — you have joined the classroom"
+          : "Assessment saved"
+      );
+      router.push(result.redirectTo);
+      router.refresh();
+    });
   };
 
   const handleBack = () => {
@@ -208,12 +221,13 @@ export function SkillAssessmentView({ inviteCode }: SkillAssessmentViewProps) {
             ))}
 
           {wizardStep === 2 && (
-            <div className="rounded-lg border border-dashed border-[#c3c6d7] bg-[#f3f3fe] p-8 text-center">
+            <div className="rounded-lg border border-[#c3c6d7] bg-[#f3f3fe] p-6">
               <h2 className="text-lg font-semibold text-[#191b23]">
                 Experience
               </h2>
               <p className="mt-2 text-sm text-[#505f76]">
-                Additional experience questions will appear here when wired.
+                Confirm you are ready to use these ratings for balanced group
+                placement. You can go back to adjust any skill on step 1.
               </p>
             </div>
           )}
@@ -247,16 +261,22 @@ export function SkillAssessmentView({ inviteCode }: SkillAssessmentViewProps) {
           <button
             type="button"
             onClick={handleBack}
-            className="rounded-lg border border-[#c3c6d7] px-6 py-2.5 text-sm font-medium text-[#434655] transition-colors hover:bg-[#e7e7f3]"
+            disabled={isPending}
+            className="rounded-lg border border-[#c3c6d7] px-6 py-2.5 text-sm font-medium text-[#434655] transition-colors hover:bg-[#e7e7f3] disabled:opacity-60"
           >
             Back
           </button>
           <button
             type="button"
             onClick={handleComplete}
-            className="rounded-lg bg-[#2563eb] px-6 py-2.5 text-sm font-medium text-white transition-opacity hover:bg-[#004ac6] hover:opacity-90"
+            disabled={isPending}
+            className="rounded-lg bg-[#2563eb] px-6 py-2.5 text-sm font-medium text-white transition-opacity hover:bg-[#004ac6] hover:opacity-90 disabled:opacity-60"
           >
-            {wizardStep < 3 ? "Continue" : "Complete Assessment"}
+            {isPending
+              ? "Saving…"
+              : wizardStep < 3
+                ? "Continue"
+                : "Complete Assessment"}
           </button>
         </div>
       </div>

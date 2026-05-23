@@ -196,6 +196,23 @@ export async function createClassroom(
       data: { user },
     } = await supabase.auth.getUser();
 
+    if (!user) {
+      return { success: false, error: "Sign in as an officer to create classrooms." };
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profile?.role !== "officer") {
+      return {
+        success: false,
+        error: "Only officer accounts can create classrooms.",
+      };
+    }
+
     const { data, error } = await supabase
       .from("classrooms")
       .insert({
@@ -204,7 +221,7 @@ export async function createClassroom(
         invite_code: inviteCode,
         max_groups: maxGroups,
         rules: rules || null,
-        created_by: user?.id ?? null,
+        created_by: user.id,
       })
       .select("id")
       .single();

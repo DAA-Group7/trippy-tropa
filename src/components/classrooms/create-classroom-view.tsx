@@ -217,8 +217,8 @@ export function CreateClassroomView() {
               </h3>
             </div>
             <p className="mb-3 text-sm text-[#505f76]">
-              Share this link directly with authorized students. They can click
-              it to open the join page.
+              Share this link with students. They sign in (or register), complete
+              skill assessment if new, then join automatically.
             </p>
             <div
               className={cn(

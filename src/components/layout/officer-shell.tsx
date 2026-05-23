@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BrandMark } from "@/components/brand/brand-mark";
+import { SignOutButton } from "@/components/auth/sign-out-button";
 import { OFFICER_AVATAR_URL } from "@/lib/constants/classroom-images";
 import { routes } from "@/lib/constants/routes";
 import { Button } from "@/components/ui/button";
@@ -125,8 +126,9 @@ export function OfficerShell({ children }: { children: React.ReactNode }) {
         <div className="flex-1">
           <NavLinks pathname={pathname} />
         </div>
-        <div className="mt-auto px-4 pb-4">
+        <div className="mt-auto space-y-3 px-4 pb-4">
           <OfficerProfile />
+          <SignOutButton />
         </div>
       </aside>
 
@@ -149,8 +151,9 @@ export function OfficerShell({ children }: { children: React.ReactNode }) {
                 <div className="py-4">
                   <NavLinks pathname={pathname} />
                 </div>
-                <div className="border-t px-4 py-4">
+                <div className="space-y-3 border-t px-4 py-4">
                   <OfficerProfile />
+                  <SignOutButton />
                 </div>
               </SheetContent>
             </Sheet>

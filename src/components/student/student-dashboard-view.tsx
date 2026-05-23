@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   ArrowRight,
   Clock,
@@ -62,7 +64,18 @@ function UpdateIcon({ type }: { type: "group" | "warning" | "forum" }) {
 }
 
 export function StudentDashboardView() {
+  const searchParams = useSearchParams();
   const assignmentsDue = 3;
+
+  useEffect(() => {
+    const joined = searchParams.get("joined");
+    const classroom = searchParams.get("classroom");
+    if (joined === "new" && classroom) {
+      toast.success(`You joined ${decodeURIComponent(classroom)}`);
+    } else if (joined === "already" && classroom) {
+      toast.info(`You’re already in ${decodeURIComponent(classroom)}`);
+    }
+  }, [searchParams]);
 
   return (
     <div className="flex flex-1 flex-col">

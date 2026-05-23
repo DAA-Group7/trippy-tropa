@@ -12,7 +12,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import { toast } from "sonner";
-import { resolvePostAuthRedirect } from "@/lib/auth/rbac";
+import { resolvePostAuthRedirect } from "@/lib/auth/join-flow";
 import { buildJoinUrl } from "@/lib/invite";
 import { APP_NAME } from "@/lib/constants/brand";
 import { routes } from "@/lib/constants/routes";
@@ -66,7 +66,7 @@ export function AuthCard({ mode, inviteCode, redirect }: AuthCardProps) {
     }
 
     const fallbackRedirect = inviteCode
-      ? `${routes.onboarding}?code=${encodeURIComponent(inviteCode)}`
+      ? routes.joinByCode(inviteCode)
       : undefined;
 
     startTransition(async () => {
@@ -100,7 +100,8 @@ export function AuthCard({ mode, inviteCode, redirect }: AuthCardProps) {
         const destination = resolvePostAuthRedirect(
           profile.role as UserRole,
           profile.skills_completed,
-          requested
+          requested,
+          inviteCode
         );
 
         toast.success("Signed in");
@@ -148,7 +149,8 @@ export function AuthCard({ mode, inviteCode, redirect }: AuthCardProps) {
       const destination = resolvePostAuthRedirect(
         role,
         skillsCompleted,
-        requested
+        requested,
+        inviteCode
       );
 
       toast.success("Account created");
