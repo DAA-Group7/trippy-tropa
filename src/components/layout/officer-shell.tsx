@@ -94,31 +94,45 @@ function NavLinks({
   );
 }
 
-function OfficerProfile() {
+function OfficerProfile({
+  name,
+  email,
+}: {
+  name: string;
+  email: string;
+}) {
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-[#c3c6d7] p-2">
+    <div className="flex items-center gap-3 rounded-lg border border-stitch-border p-2">
       <Image
         src={OFFICER_AVATAR_URL}
-        alt="Dr. Smith"
+        alt=""
         width={40}
         height={40}
         className="size-10 rounded-full object-cover"
         unoptimized
       />
       <div className="min-w-0">
-        <p className="truncate text-sm font-medium text-[#191b23]">Dr. Smith</p>
-        <p className="text-xs text-[#434655]">Admin Officer</p>
+        <p className="truncate text-sm font-medium text-stitch-text">{name}</p>
+        <p className="truncate text-xs text-stitch-text-secondary">{email}</p>
       </div>
     </div>
   );
 }
 
-export function OfficerShell({ children }: { children: React.ReactNode }) {
+export function OfficerShell({
+  children,
+  officerName,
+  officerEmail,
+}: {
+  children: React.ReactNode;
+  officerName: string;
+  officerEmail: string;
+}) {
   const pathname = usePathname();
 
   return (
-    <div className="flex min-h-screen bg-[#faf8ff] text-[#191b23]">
-      <aside className="fixed left-0 z-20 hidden h-full w-64 flex-col border-r border-[#c3c6d7] bg-white py-6 md:flex">
+    <div className="flex min-h-screen bg-stitch-canvas text-stitch-text">
+      <aside className="fixed left-0 z-20 hidden h-full w-64 flex-col border-r border-stitch-border bg-stitch-surface py-6 md:flex">
         <div className="mb-8 px-4">
           <BrandMark size="md" href={routes.officer.dashboard} showTagline />
         </div>
@@ -126,13 +140,13 @@ export function OfficerShell({ children }: { children: React.ReactNode }) {
           <NavLinks pathname={pathname} />
         </div>
         <div className="mt-auto space-y-3 px-4 pb-4">
-          <OfficerProfile />
+          <OfficerProfile name={officerName} email={officerEmail} />
           <SignOutButton />
         </div>
       </aside>
 
       <div className="flex min-h-screen flex-1 flex-col md:ml-64">
-        <header className="flex h-16 shrink-0 items-center justify-between border-b border-[#c3c6d7] bg-white px-4 md:hidden">
+        <header className="flex h-16 shrink-0 items-center justify-between border-b border-stitch-border bg-stitch-surface px-4 md:hidden">
           <BrandMark size="sm" showTagline={false} />
           <Sheet>
               <SheetTrigger
@@ -150,16 +164,25 @@ export function OfficerShell({ children }: { children: React.ReactNode }) {
                   <NavLinks pathname={pathname} />
                 </div>
                 <div className="space-y-3 border-t px-4 py-4">
-                  <OfficerProfile />
+                  <OfficerProfile name={officerName} email={officerEmail} />
                   <SignOutButton />
                 </div>
               </SheetContent>
             </Sheet>
         </header>
 
-        <div className="flex flex-1 flex-col pb-20 md:pb-0">{children}</div>
+        <main
+          id="main-content"
+          className="flex flex-1 flex-col pb-20 md:pb-0"
+          tabIndex={-1}
+        >
+          {children}
+        </main>
 
-        <nav className="fixed bottom-0 left-0 z-50 flex w-full items-center justify-around border-t border-[#c3c6d7] bg-white/90 px-4 py-2 backdrop-blur-md md:hidden">
+        <nav
+          className="fixed bottom-0 left-0 z-50 flex w-full items-center justify-around border-t border-stitch-border bg-stitch-surface/90 px-4 py-2 backdrop-blur-md md:hidden"
+          aria-label="Mobile navigation"
+        >
           {navItems.map((item) => {
             const active = isNavActive(pathname, item);
             const Icon = item.icon;
@@ -178,8 +201,8 @@ export function OfficerShell({ children }: { children: React.ReactNode }) {
                 className={cn(
                   "flex flex-col items-center gap-0.5 rounded-xl px-3 py-1 text-xs font-semibold transition-transform active:scale-95",
                   active
-                    ? "bg-[#d0e1fb] text-[#54647a]"
-                    : "text-[#434655]"
+                    ? "bg-stitch-accent-muted text-stitch-nav-active"
+                    : "text-stitch-text-secondary"
                 )}
               >
                 <Icon className="size-5" />

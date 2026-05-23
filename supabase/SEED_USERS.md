@@ -1,37 +1,41 @@
 # Development seed users
 
-Apply migrations **001 → 002 → 003 → 004** in order (SQL Editor or `supabase db push`).
+Apply migrations **001 → 009** in order (SQL Editor or `supabase db push`).
 
-If login shows **"Database error querying schema"**, run migration `005_fix_auth_users_tokens.sql` (`supabase db push`). This fixes NULL token columns on seeded `auth.users` rows.
+If login shows **"Database error querying schema"**, run migration `005_fix_auth_users_tokens.sql`.
 
-If `004` failed with `gen_salt does not exist`, pull the latest `004_seed_dev_users.sql` (uses `extensions.gen_salt`) and run:
+If `004` failed with `gen_salt does not exist`, use the latest `004_seed_dev_users.sql` (uses `extensions.gen_salt`).
 
-```bash
-supabase db push
-```
-
-Or paste the contents of `004_seed_dev_users.sql` into the Supabase SQL Editor and run once.
+## Accounts
 
 | Role    | Email                     | Password     |
 |---------|---------------------------|--------------|
 | Officer | `officer@trippy-tropa.dev` | `Officer123!` |
 | Student | `student@trippy-tropa.dev` | `Student123!` |
+| Student | `jordan@trippy-tropa.dev`  | `Student123!` |
+| Student | `sam@trippy-tropa.dev`     | `Student123!` |
 
-- **Officer** → `/officer/dashboard` (skills marked complete in seed)
-- **Student** → `/onboarding/skills` first, then `/student/dashboard` after assessment
+## Demo classroom (migration 009)
+
+After `009_seed_demo_data.sql`:
+
+- **Classroom:** CS 301 — Software Engineering
+- **Invite code:** `DEMO2026`
+- **Groups:** Team Alpha (Alex + Jordan), Team Beta (Sam)
+- **Includes:** skill ratings, tasks, notifications, group chat messages
+
+**Quick student path**
+
+1. Log in as `student@trippy-tropa.dev` / `Student123!`
+2. Complete onboarding skills if prompted (seed sets `skills_completed` on re-run of 009)
+3. Open dashboard — classroom card links to group workspace with live chat
+4. Or join manually with invite code `DEMO2026`
+
+**Officer path**
+
+1. Log in as `officer@trippy-tropa.dev` / `Officer123!`
+2. Dashboard shows the demo classroom, groups, and tasks
 
 Self-registration always creates **student** accounts. Officer accounts are created via seed or service role only.
-
-## Registration shows “email rate limit exceeded”
-
-Supabase sends a confirmation email on each sign-up. Free projects allow only a few emails per hour, so repeated tests hit the limit quickly.
-
-**Pick one fix for local development:**
-
-1. **Recommended:** Add `SUPABASE_SERVICE_ROLE_KEY` to `.env` (see `.env.example`). The app will create accounts with email already confirmed and **no** confirmation email is sent.
-2. **Alternative:** Supabase Dashboard → **Authentication** → **Providers** → **Email** → disable **Confirm email**.
-3. **Or wait** ~1 hour for the rate limit to reset, then register once.
-
-If `janedoe2@gmail.com` was used before, use **Login** instead of registering again.
 
 **Do not use these passwords in production.**

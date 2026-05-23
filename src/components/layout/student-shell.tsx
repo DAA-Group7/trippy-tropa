@@ -69,8 +69,8 @@ function NavLinks({
             className={cn(
               "flex items-center gap-4 rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200",
               active
-                ? "border-r-4 border-[#004ac6] bg-[#f3f3fe] font-bold text-[#004ac6]"
-                : "text-[#505f76] hover:bg-[#e7e7f3] hover:text-[#004ac6]"
+                ? "border-r-4 border-stitch-primary bg-stitch-accent-soft font-bold text-stitch-primary"
+                : "text-stitch-text-muted hover:bg-stitch-accent-muted hover:text-stitch-primary"
             )}
           >
             <Icon className="size-5" />
@@ -87,8 +87,8 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
   const isDashboard = pathname === routes.student.dashboard;
 
   return (
-    <div className="flex min-h-screen bg-[#faf8ff] text-[#191b23]">
-      <aside className="fixed left-0 z-40 hidden h-full w-64 flex-col border-r border-[#c3c6d7] bg-white py-6 md:flex">
+    <div className="flex min-h-screen bg-stitch-canvas text-stitch-text">
+      <aside className="fixed left-0 z-40 hidden h-full w-64 flex-col border-r border-stitch-border bg-stitch-surface py-6 md:flex">
         <div className="mb-10 px-4">
           <BrandMark
             size="md"
@@ -111,9 +111,18 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
             <SignOutButton variant="compact" />
           </header>
         )}
-        <div className="flex flex-1 flex-col pb-20 md:pb-0">{children}</div>
+        <main
+          id="main-content"
+          className="flex flex-1 flex-col pb-20 md:pb-0"
+          tabIndex={-1}
+        >
+          {children}
+        </main>
 
-        <nav className="fixed bottom-0 left-0 z-50 flex w-full items-center justify-around border-t border-[#c3c6d7] bg-white/90 px-4 py-2 backdrop-blur-md md:hidden">
+        <nav
+          className="fixed bottom-0 left-0 z-50 flex w-full items-center justify-around border-t border-stitch-border bg-stitch-surface/90 px-4 py-2 backdrop-blur-md md:hidden"
+          aria-label="Mobile navigation"
+        >
           {navItems.map((item) => {
             const active = isNavActive(pathname, item);
             const Icon = item.icon;
@@ -132,8 +141,8 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
                 className={cn(
                   "relative flex flex-col items-center gap-0.5 rounded-xl px-3 py-1 text-xs font-semibold transition-transform active:scale-95",
                   active
-                    ? "bg-[#d0e1fb] text-[#54647a]"
-                    : "text-[#434655]"
+                    ? "bg-stitch-accent-muted text-stitch-nav-active"
+                    : "text-stitch-text-secondary"
                 )}
               >
                 <Icon className="size-5" />

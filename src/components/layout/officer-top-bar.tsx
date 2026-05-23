@@ -28,7 +28,8 @@ export function OfficerTopBar({
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder={searchPlaceholder}
-          className="w-full border-0 bg-transparent text-sm text-[#191b23] placeholder:text-[#737686] focus:outline-none focus:ring-0"
+          aria-label={searchPlaceholder}
+          className="w-full border-0 bg-transparent text-sm text-stitch-text placeholder:text-stitch-text-nav focus:outline-none focus:ring-0"
         />
       </div>
       {userId ? (

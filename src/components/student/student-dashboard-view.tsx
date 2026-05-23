@@ -14,30 +14,32 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import type { NotificationItem } from "@/app/actions/notifications";
-import {
-  DEMO_ACTIVE_TASKS,
-  DEMO_STUDENT_CLASSROOMS,
-  STUDENT_PROFILE,
-} from "@/lib/constants/student-dashboard-demo";
+import type {
+  StudentDashboardActiveTask,
+  StudentDashboardClassroom,
+} from "@/app/actions/student-dashboard";
+import { STUDENT_PROFILE } from "@/lib/constants/student-dashboard-demo";
 import { BrandTitle } from "@/components/brand/brand-mark";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { NotificationsBell } from "@/components/notifications/notifications-bell";
 import { NotificationsList } from "@/components/notifications/notifications-list";
 import { useNotificationsRealtime } from "@/hooks/use-notifications-realtime";
+import { stitch } from "@/lib/design/stitch";
 import { routes } from "@/lib/constants/routes";
 import { cn } from "@/lib/utils";
-
-const cardShadow =
-  "shadow-[0_1px_3px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.03)]";
 
 interface StudentDashboardViewProps {
   userId: string;
   initialNotifications: NotificationItem[];
+  classrooms: StudentDashboardClassroom[];
+  activeTasks: StudentDashboardActiveTask[];
 }
 
 export function StudentDashboardView({
   userId,
   initialNotifications,
+  classrooms,
+  activeTasks,
 }: StudentDashboardViewProps) {
   const { items, setItems } = useNotificationsRealtime(
     userId,
@@ -45,7 +47,7 @@ export function StudentDashboardView({
   );
   const searchParams = useSearchParams();
   const router = useRouter();
-  const assignmentsDue = 3;
+  const assignmentsDue = activeTasks.length;
 
   useEffect(() => {
     const joined = searchParams.get("joined");
@@ -72,10 +74,11 @@ export function StudentDashboardView({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="rounded-full p-2 text-[#004ac6] transition-colors hover:bg-[#e7e7f3]"
-            aria-label="Search"
+            className="rounded-full p-2 text-stitch-primary transition-colors hover:bg-stitch-accent-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stitch-primary"
+            aria-label="Search dashboard (coming soon)"
+            disabled
           >
-            <Search className="size-5" />
+            <Search className="size-5" aria-hidden />
           </button>
           <div className="md:hidden">
             <SignOutButton variant="compact" />
@@ -89,7 +92,7 @@ export function StudentDashboardView({
           ) : null}
           <Image
             src={STUDENT_PROFILE.avatarUrl}
-            alt=""
+            alt={`${STUDENT_PROFILE.firstName} profile`}
             width={32}
             height={32}
             className="size-8 cursor-pointer rounded-full border border-[#c3c6d7] object-cover"
@@ -104,8 +107,10 @@ export function StudentDashboardView({
             <h2 className="font-heading text-3xl font-bold tracking-tight text-[#191b23] sm:text-4xl md:text-5xl">
               Welcome back, {STUDENT_PROFILE.firstName}.
             </h2>
-            <p className="mt-1 text-lg text-[#434655]">
-              You have {assignmentsDue} assignments due this week.
+            <p className="mt-1 text-lg text-stitch-text-secondary">
+              {assignmentsDue === 0
+                ? "No open assignments right now."
+                : `You have ${assignmentsDue} open assignment${assignmentsDue === 1 ? "" : "s"}.`}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -146,53 +151,64 @@ export function StudentDashboardView({
               </button>
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {DEMO_ACTIVE_TASKS.map((task) => (
-                <div
-                  key={task.id}
+              {activeTasks.length === 0 ? (
+                <p
                   className={cn(
-                    "flex cursor-pointer flex-col gap-4 rounded-xl border border-[#c3c6d7] bg-white p-4 transition-colors hover:border-[#004ac6]",
-                    cardShadow
+                    "col-span-full rounded-xl border border-dashed border-stitch-border bg-stitch-surface p-8 text-center text-sm text-stitch-text-muted sm:col-span-2",
+                    stitch.cardShadow
                   )}
                 >
-                  <div className="flex items-start justify-between">
-                    <span
-                      className={cn(
-                        "rounded-full px-2 py-0.5 text-xs font-semibold uppercase tracking-wide",
-                        task.status === "in_progress"
-                          ? "bg-[#d0e1fb] text-[#54647a]"
-                          : "bg-[#e7e7f3] text-[#434655]"
-                      )}
-                    >
-                      {task.status === "in_progress" ? "In Progress" : "To Do"}
-                    </span>
-                    <MoreHorizontal className="size-5 text-[#737686]" />
+                  No active tasks. Join a classroom with invite code{" "}
+                  <strong className="text-stitch-primary">DEMO2026</strong> after
+                  running seed migration 009.
+                </p>
+              ) : (
+                activeTasks.map((task) => (
+                  <div
+                    key={task.id}
+                    className={cn(
+                      "flex flex-col gap-4 rounded-xl border border-stitch-border bg-stitch-surface p-4",
+                      stitch.cardShadow
+                    )}
+                  >
+                    <div className="flex items-start justify-between">
+                      <span className="rounded-full bg-stitch-accent-muted px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-stitch-text-secondary">
+                        {task.classroom}
+                      </span>
+                      <MoreHorizontal
+                        className="size-5 text-stitch-text-nav"
+                        aria-hidden
+                      />
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-semibold text-stitch-text">
+                        {task.title}
+                      </h4>
+                    </div>
+                    <div className="mt-auto flex items-center gap-2 border-t border-stitch-border pt-3">
+                      <Clock
+                        className={cn(
+                          "size-4",
+                          task.urgent
+                            ? "text-stitch-destructive"
+                            : "text-stitch-text-secondary"
+                        )}
+                        aria-hidden
+                      />
+                      <span
+                        className={cn(
+                          "text-xs font-semibold",
+                          task.urgent
+                            ? "text-stitch-destructive"
+                            : "text-stitch-text-secondary"
+                        )}
+                      >
+                        Due {task.dueLabel}
+                      </span>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="text-lg font-semibold text-[#191b23]">
-                      {task.title}
-                    </h4>
-                    <p className="mt-1 text-sm text-[#434655]">
-                      {task.description}
-                    </p>
-                  </div>
-                  <div className="mt-auto flex items-center gap-2 border-t border-[#c3c6d7] pt-3">
-                    <Clock
-                      className={cn(
-                        "size-4",
-                        task.urgent ? "text-[#ba1a1a]" : "text-[#434655]"
-                      )}
-                    />
-                    <span
-                      className={cn(
-                        "text-xs font-semibold",
-                        task.urgent ? "text-[#ba1a1a]" : "text-[#434655]"
-                      )}
-                    >
-                      {task.dueLabel}
-                    </span>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 
@@ -233,13 +249,27 @@ export function StudentDashboardView({
               </Link>
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {DEMO_STUDENT_CLASSROOMS.map((classroom) => (
+              {classrooms.length === 0 ? (
+                <p
+                  className={cn(
+                    "col-span-full rounded-xl border border-dashed border-stitch-border p-8 text-center text-sm text-stitch-text-muted",
+                    stitch.cardShadow
+                  )}
+                >
+                  You are not enrolled yet.{" "}
+                  <Link href={routes.join} className="font-medium text-stitch-primary hover:underline">
+                    Join a classroom
+                  </Link>{" "}
+                  with code <strong>DEMO2026</strong>.
+                </p>
+              ) : (
+                classrooms.map((classroom) => (
                 <Link
                   key={classroom.id}
                   href={routes.student.group(classroom.id)}
                   className={cn(
-                    "flex flex-col overflow-hidden rounded-xl border border-[#c3c6d7] bg-white transition-shadow hover:shadow-[0_10px_15px_-3px_rgba(0,0,0,0.08)]",
-                    cardShadow
+                    "group flex flex-col overflow-hidden rounded-xl border border-stitch-border bg-stitch-surface transition-shadow hover:shadow-[0_10px_15px_-3px_rgba(0,0,0,0.08)]",
+                    stitch.cardShadow
                   )}
                 >
                   <div
@@ -272,7 +302,7 @@ export function StudentDashboardView({
                     </div>
                   </div>
                 </Link>
-              ))}
+              )))}
             </div>
           </div>
         </div>

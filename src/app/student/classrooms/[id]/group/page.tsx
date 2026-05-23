@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { getStudentGroupWorkspace } from "@/app/actions/groups";
+import { getGroupMessages } from "@/app/actions/messages";
 import { getSessionUser } from "@/lib/auth/session";
 import { routes } from "@/lib/constants/routes";
 import { StudentGroupWorkspaceView } from "@/components/student/student-group-workspace-view";
@@ -28,5 +29,14 @@ export default async function GroupWorkspacePage({
     notFound();
   }
 
-  return <StudentGroupWorkspaceView data={data} />;
+  const initialMessages = data.group
+    ? await getGroupMessages(data.group.id)
+    : [];
+
+  return (
+    <StudentGroupWorkspaceView
+      data={data}
+      initialMessages={initialMessages}
+    />
+  );
 }

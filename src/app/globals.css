@@ -39,6 +39,19 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-stitch-primary: var(--stitch-primary);
+  --color-stitch-cta: var(--stitch-cta);
+  --color-stitch-canvas: var(--stitch-canvas);
+  --color-stitch-surface: var(--stitch-surface);
+  --color-stitch-border: var(--stitch-border);
+  --color-stitch-text: var(--stitch-text);
+  --color-stitch-text-secondary: var(--stitch-text-secondary);
+  --color-stitch-text-muted: var(--stitch-text-muted);
+  --color-stitch-text-nav: var(--stitch-text-nav);
+  --color-stitch-accent-soft: var(--stitch-accent-soft);
+  --color-stitch-accent-muted: var(--stitch-accent-muted);
+  --color-stitch-destructive: var(--stitch-destructive);
+  --color-stitch-nav-active: var(--stitch-nav-active);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -49,6 +62,21 @@
 }
 
 :root {
+  /* Stitch palette (see .interface-design/system.md) */
+  --stitch-primary: #004ac6;
+  --stitch-cta: #2563eb;
+  --stitch-canvas: #faf8ff;
+  --stitch-surface: #ffffff;
+  --stitch-border: #c3c6d7;
+  --stitch-text: #191b23;
+  --stitch-text-secondary: #434655;
+  --stitch-text-muted: #505f76;
+  --stitch-text-nav: #737686;
+  --stitch-accent-soft: #f3f3fe;
+  --stitch-accent-muted: #e7e7f3;
+  --stitch-destructive: #ba1a1a;
+  --stitch-nav-active: #54647a;
+
   --background: oklch(0.99 0.005 250);
   --foreground: oklch(0.22 0.04 260);
   --card: oklch(1 0 0);
