@@ -12,10 +12,11 @@ import {
 } from "@/app/actions/join-classroom";
 import { ClassroomPreviewCard } from "@/components/join/classroom-preview-card";
 import { loginWithInvite, registerWithInvite } from "@/lib/auth/join-flow";
+import { routes } from "@/lib/constants/routes";
+import { parseInviteCodeFromInput } from "@/lib/invite";
 import { createLogger } from "@/lib/logger";
 
 const log = createLogger("join:form");
-import { parseInviteCodeFromInput } from "@/lib/invite";
 
 const inputClass =
   "w-full rounded-lg border border-[#c3c6d7] bg-[#faf8ff] px-4 py-3 text-base text-[#191b23] transition-colors placeholder:text-[#737686] focus:border-[#004ac6] focus:outline-none focus:ring-1 focus:ring-[#004ac6]";
