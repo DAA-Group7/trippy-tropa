@@ -11,7 +11,7 @@ declare
   student_id uuid := 'a0000000-0000-4000-8000-000000000002';
   student2_id uuid := 'a0000000-0000-4000-8000-000000000003';
   student3_id uuid := 'a0000000-0000-4000-8000-000000000004';
-  classroom_id uuid := 'b0000000-0000-4000-8000-000000000001';
+  v_classroom_id uuid := 'b0000000-0000-4000-8000-000000000001';
   group1_id uuid := 'c0000000-0000-4000-8000-000000000001';
   group2_id uuid := 'c0000000-0000-4000-8000-000000000002';
   pw text := extensions.crypt('Student123!', extensions.gen_salt('bf'));
@@ -92,7 +92,7 @@ begin
 
   insert into public.classrooms (id, name, subject, invite_code, max_groups, created_by)
   values (
-    classroom_id,
+    v_classroom_id,
     'CS 301 — Software Engineering',
     'CS 301',
     'DEMO2026',
@@ -103,23 +103,29 @@ begin
 
   insert into public.classroom_members (classroom_id, user_id)
   values
-    (classroom_id, student_id),
-    (classroom_id, student2_id),
-    (classroom_id, student3_id)
+    (v_classroom_id, student_id),
+    (v_classroom_id, student2_id),
+    (v_classroom_id, student3_id)
   on conflict do nothing;
 
   delete from public.group_messages
-  where group_id in (select id from public.groups where classroom_id = classroom_id);
+  where group_id in (
+    select g.id from public.groups g where g.classroom_id = v_classroom_id
+  );
   delete from public.tasks
-  where group_id in (select id from public.groups where classroom_id = classroom_id);
+  where group_id in (
+    select g.id from public.groups g where g.classroom_id = v_classroom_id
+  );
   delete from public.group_members
-  where group_id in (select id from public.groups where classroom_id = classroom_id);
-  delete from public.groups where classroom_id = classroom_id;
+  where group_id in (
+    select g.id from public.groups g where g.classroom_id = v_classroom_id
+  );
+  delete from public.groups g where g.classroom_id = v_classroom_id;
 
   insert into public.groups (id, classroom_id, name, leader_id, progress_status)
   values
-    (group1_id, classroom_id, 'Team Alpha', student_id, 'in_progress'),
-    (group2_id, classroom_id, 'Team Beta', student3_id, 'not_started');
+    (group1_id, v_classroom_id, 'Team Alpha', student_id, 'in_progress'),
+    (group2_id, v_classroom_id, 'Team Beta', student3_id, 'not_started');
 
   insert into public.group_members (group_id, user_id)
   values
@@ -193,7 +199,7 @@ begin
     );
 
   delete from public.notifications n
-  where n.classroom_id = classroom_id
+  where n.classroom_id = v_classroom_id
     and n.user_id in (student_id, officer_id);
 
   insert into public.notifications (user_id, title, body, kind, classroom_id, read)
@@ -202,19 +208,19 @@ begin
       student_id,
       'Assigned to Team Alpha',
       'Your instructor published groups for CS 301.',
-      'group_assigned', classroom_id, true
+      'group_assigned', v_classroom_id, true
     ),
     (
       student_id,
       'New task: API contract draft',
       'Auto-assigned based on your skills.',
-      'task_assigned', classroom_id, false
+      'task_assigned', v_classroom_id, false
     ),
     (
       officer_id,
       'New student enrolled',
       'Students joined CS 301 — Software Engineering.',
-      'classroom_joined', classroom_id, false
+      'classroom_joined', v_classroom_id, false
     );
 end;
 $$;
