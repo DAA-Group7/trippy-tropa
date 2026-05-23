@@ -4,10 +4,6 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  signInWithPassword,
-  signUpStudent,
-} from "@/app/actions/auth";
-import {
   Eye,
   EyeOff,
   GraduationCap,
@@ -16,10 +12,13 @@ import {
   UserPlus,
 } from "lucide-react";
 import { toast } from "sonner";
+import { resolvePostAuthRedirect } from "@/lib/auth/rbac";
 import { buildJoinUrl } from "@/lib/invite";
 import { APP_NAME } from "@/lib/constants/brand";
 import { routes } from "@/lib/constants/routes";
+import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import type { UserRole } from "@/types/database";
 
 const inputClass =
   "w-full rounded-lg border border-[#c3c6d7] bg-white px-4 py-2.5 text-base text-[#191b23] transition-colors placeholder:text-[#737686] focus:border-[#2563eb] focus:outline-none focus:ring-1 focus:ring-[#2563eb]";
@@ -71,26 +70,89 @@ export function AuthCard({ mode, inviteCode, redirect }: AuthCardProps) {
       : undefined;
 
     startTransition(async () => {
-      const result = isLogin
-        ? await signInWithPassword(
-            email,
-            password,
-            redirect ?? fallbackRedirect
-          )
-        : await signUpStudent(
-            email,
-            password,
-            fullName,
-            redirect ?? fallbackRedirect
-          );
+      const supabase = createClient();
+      const requested = redirect ?? fallbackRedirect;
 
-      if (!result.ok) {
-        toast.error(result.error);
+      if (isLogin) {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
+
+        if (error) {
+          toast.error(error.message);
+          return;
+        }
+
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("role, skills_completed")
+          .eq("id", data.user.id)
+          .maybeSingle();
+
+        if (profileError || !profile) {
+          toast.error(
+            "Profile not found. Run migrations 003–004 and seed users in Supabase."
+          );
+          return;
+        }
+
+        const destination = resolvePostAuthRedirect(
+          profile.role as UserRole,
+          profile.skills_completed,
+          requested
+        );
+
+        toast.success("Signed in");
+        router.push(destination);
+        router.refresh();
         return;
       }
 
-      toast.success(isLogin ? "Signed in" : "Account created");
-      router.push(result.redirectTo);
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: {
+            full_name: fullName.trim(),
+            role: "student",
+          },
+        },
+      });
+
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+
+      if (!data.user) {
+        toast.error("Could not create account.");
+        return;
+      }
+
+      if (!data.session) {
+        toast.info(
+          "Check your email to confirm your account, then sign in."
+        );
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role, skills_completed")
+        .eq("id", data.user.id)
+        .maybeSingle();
+
+      const role = (profile?.role as UserRole) ?? "student";
+      const skillsCompleted = profile?.skills_completed ?? false;
+      const destination = resolvePostAuthRedirect(
+        role,
+        skillsCompleted,
+        requested
+      );
+
+      toast.success("Account created");
+      router.push(destination);
       router.refresh();
     });
   };

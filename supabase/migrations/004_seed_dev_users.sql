@@ -5,7 +5,8 @@
 --   Officer: officer@trippy-tropa.dev  /  Officer123!
 --   Student: student@trippy-tropa.dev  /  Student123!
 
-create extension if not exists pgcrypto;
+-- On Supabase hosted DBs, pgcrypto lives in the extensions schema
+create extension if not exists pgcrypto with schema extensions;
 
 do $$
 declare
@@ -14,6 +15,8 @@ declare
   student_id uuid := 'a0000000-0000-4000-8000-000000000002';
   officer_email text := 'officer@trippy-tropa.dev';
   student_email text := 'student@trippy-tropa.dev';
+  officer_pw text := extensions.crypt('Officer123!', extensions.gen_salt('bf'));
+  student_pw text := extensions.crypt('Student123!', extensions.gen_salt('bf'));
 begin
   select id into inst_id from auth.instances limit 1;
   if inst_id is null then
@@ -30,6 +33,10 @@ begin
       email,
       encrypted_password,
       email_confirmed_at,
+      confirmation_token,
+      recovery_token,
+      email_change_token_new,
+      email_change,
       raw_app_meta_data,
       raw_user_meta_data,
       created_at,
@@ -40,8 +47,12 @@ begin
       'authenticated',
       'authenticated',
       officer_email,
-      crypt('Officer123!', gen_salt('bf')),
+      officer_pw,
       now(),
+      '',
+      '',
+      '',
+      '',
       '{"provider":"email","providers":["email"],"seed":true}'::jsonb,
       '{"full_name":"Dr. Smith","role":"officer"}'::jsonb,
       now(),
@@ -79,6 +90,10 @@ begin
       email,
       encrypted_password,
       email_confirmed_at,
+      confirmation_token,
+      recovery_token,
+      email_change_token_new,
+      email_change,
       raw_app_meta_data,
       raw_user_meta_data,
       created_at,
@@ -89,8 +104,12 @@ begin
       'authenticated',
       'authenticated',
       student_email,
-      crypt('Student123!', gen_salt('bf')),
+      student_pw,
       now(),
+      '',
+      '',
+      '',
+      '',
       '{"provider":"email","providers":["email"],"seed":true}'::jsonb,
       '{"full_name":"Alex Student","role":"student"}'::jsonb,
       now(),
