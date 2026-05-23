@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { notifyStudentJoinedClassroom } from "@/app/actions/notifications";
 import { createClient } from "@/lib/supabase/server";
 import { routes } from "@/lib/constants/routes";
 import { createLogger, maskUserId } from "@/lib/logger";
@@ -136,6 +137,12 @@ export async function enrollInClassroom(
     });
     return { ok: false, error: insertError.message };
   }
+
+  await notifyStudentJoinedClassroom(
+    user.id,
+    classroom.id,
+    classroom.name
+  );
 
   revalidatePath(routes.student.dashboard);
 

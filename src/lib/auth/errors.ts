@@ -1,13 +1,30 @@
 /** User-facing copy for Supabase Auth errors (rate limits, etc.). */
-export function formatAuthErrorMessage(message: string): string {
+export function formatAuthErrorMessage(
+  message: string,
+  code?: string | null
+): string {
   const lower = message.toLowerCase();
+  const normalizedCode = code?.toLowerCase() ?? "";
 
-  if (lower.includes("rate limit") || lower.includes("too many requests")) {
-    return "Email rate limit exceeded. Wait a few minutes before trying again, or turn off “Confirm email” in Supabase Auth settings for local testing.";
+  if (
+    normalizedCode === "over_email_send_rate_limit" ||
+    normalizedCode === "over_request_rate_limit" ||
+    lower.includes("rate limit") ||
+    lower.includes("too many requests")
+  ) {
+    return "Email rate limit exceeded. Wait about an hour, turn off “Confirm email” in Supabase Auth, or add SUPABASE_SERVICE_ROLE_KEY to .env for local sign-up without confirmation emails.";
   }
 
-  if (lower.includes("already registered") || lower.includes("already been registered")) {
+  if (
+    normalizedCode === "user_already_exists" ||
+    lower.includes("already registered") ||
+    lower.includes("already been registered")
+  ) {
     return "An account with this email already exists. Try signing in instead.";
+  }
+
+  if (lower.includes("email not confirmed")) {
+    return "Confirm your email first, then sign in. For local dev, disable “Confirm email” in Supabase or add SUPABASE_SERVICE_ROLE_KEY to .env.";
   }
 
   if (lower.includes("invalid") && lower.includes("email")) {
@@ -17,7 +34,16 @@ export function formatAuthErrorMessage(message: string): string {
   return message;
 }
 
-export function isAuthRateLimitError(message: string): boolean {
+export function isAuthRateLimitError(
+  message: string,
+  code?: string | null
+): boolean {
   const lower = message.toLowerCase();
-  return lower.includes("rate limit") || lower.includes("too many requests");
+  const normalizedCode = code?.toLowerCase() ?? "";
+  return (
+    normalizedCode === "over_email_send_rate_limit" ||
+    normalizedCode === "over_request_rate_limit" ||
+    lower.includes("rate limit") ||
+    lower.includes("too many requests")
+  );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -142,6 +142,10 @@ export function KanbanBoard({ initialTasks }: KanbanBoardProps) {
   const [tasks, setTasks] = useState(initialTasks);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    setTasks(initialTasks);
+  }, [initialTasks]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })

@@ -2,6 +2,13 @@ export type UserRole = "officer" | "student";
 
 export type TaskStatus = "todo" | "in_progress" | "review" | "done";
 
+export type NotificationKind =
+  | "group_assigned"
+  | "task_assigned"
+  | "task_updated"
+  | "classroom_joined"
+  | "deadline";
+
 export type SkillKey =
   | "communication"
   | "leadership"

@@ -22,4 +22,16 @@ Or paste the contents of `004_seed_dev_users.sql` into the Supabase SQL Editor a
 
 Self-registration always creates **student** accounts. Officer accounts are created via seed or service role only.
 
+## Registration shows “email rate limit exceeded”
+
+Supabase sends a confirmation email on each sign-up. Free projects allow only a few emails per hour, so repeated tests hit the limit quickly.
+
+**Pick one fix for local development:**
+
+1. **Recommended:** Add `SUPABASE_SERVICE_ROLE_KEY` to `.env` (see `.env.example`). The app will create accounts with email already confirmed and **no** confirmation email is sent.
+2. **Alternative:** Supabase Dashboard → **Authentication** → **Providers** → **Email** → disable **Confirm email**.
+3. **Or wait** ~1 hour for the rate limit to reset, then register once.
+
+If `janedoe2@gmail.com` was used before, use **Login** instead of registering again.
+
 **Do not use these passwords in production.**

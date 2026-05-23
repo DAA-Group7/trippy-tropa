@@ -8,9 +8,14 @@ import {
   type TaskToAssign,
 } from "@/lib/algorithms/task-assigner";
 import {
+  notifyTaskAssignmentsBulk,
+  notifyTaskStatusUpdated,
+} from "@/app/actions/notifications";
+import {
   DEFAULT_STUDENT_CAPACITY_HOURS,
   formatRequiredSkills,
   parseRequiredSkills,
+  statusLabel,
 } from "@/lib/tasks/helpers";
 import { createClient } from "@/lib/supabase/server";
 import { routes } from "@/lib/constants/routes";
@@ -391,6 +396,12 @@ export async function autoAssignTasks(
     }
 
     let assignedCount = 0;
+    const notifyRows: {
+      userId: string;
+      taskTitle: string;
+      classroomId: string;
+      taskId: string;
+    }[] = [];
 
     for (const group of groups) {
       const { data: members } = await ctx.supabase
@@ -452,6 +463,8 @@ export async function autoAssignTasks(
 
       const assignments = assignTasksOptimally(toAssign, students);
 
+      const taskById = new Map((taskRows ?? []).map((t) => [t.id, t]));
+
       for (const assignment of assignments) {
         const { error } = await ctx.supabase
           .from("tasks")
@@ -462,7 +475,18 @@ export async function autoAssignTasks(
           })
           .eq("id", assignment.taskId);
 
-        if (!error) assignedCount += 1;
+        if (!error) {
+          assignedCount += 1;
+          const task = taskById.get(assignment.taskId);
+          if (task) {
+            notifyRows.push({
+              userId: assignment.studentId,
+              taskTitle: task.title,
+              classroomId,
+              taskId: assignment.taskId,
+            });
+          }
+        }
       }
     }
 
@@ -473,6 +497,7 @@ export async function autoAssignTasks(
       };
     }
 
+    await notifyTaskAssignmentsBulk(notifyRows);
     revalidateTaskPaths(classroomId);
     return { ok: true, assignedCount };
   } catch {
@@ -497,7 +522,7 @@ export async function updateTaskStatus(
 
     const { data: task } = await supabase
       .from("tasks")
-      .select("id, assigned_to, group_id")
+      .select("id, title, assigned_to, group_id")
       .eq("id", parsed.data.taskId)
       .maybeSingle();
 
@@ -542,6 +567,32 @@ export async function updateTaskStatus(
 
     if (error) return { ok: false, error: error.message };
 
+    const { data: members } = await supabase
+      .from("group_members")
+      .select("user_id")
+      .eq("group_id", task.group_id);
+
+    const { data: classroom } = await supabase
+      .from("classrooms")
+      .select("created_by")
+      .eq("id", group.classroom_id)
+      .maybeSingle();
+
+    const recipientIds = [
+      ...(members ?? []).map((m) => m.user_id as string),
+      ...(classroom?.created_by ? [classroom.created_by] : []),
+      ...(task.assigned_to ? [task.assigned_to] : []),
+    ];
+
+    await notifyTaskStatusUpdated(
+      [...new Set(recipientIds)],
+      task.title,
+      statusLabel(parsed.data.status),
+      group.classroom_id,
+      task.id,
+      user.id
+    );
+
     revalidateTaskPaths(group.classroom_id);
 
     return { ok: true };
@@ -553,7 +604,12 @@ export async function updateTaskStatus(
 export async function getStudentKanbanTasks(
   classroomId: string
 ): Promise<
-  | { classroomName: string; groupName: string; tasks: KanbanTaskData[] }
+  | {
+      classroomName: string;
+      groupName: string;
+      groupId: string | null;
+      tasks: KanbanTaskData[];
+    }
   | null
 > {
   try {
@@ -588,6 +644,7 @@ export async function getStudentKanbanTasks(
       return {
         classroomName: classroom?.name ?? "Classroom",
         groupName: "No group",
+        groupId: null,
         tasks: [],
       };
     }
@@ -603,6 +660,7 @@ export async function getStudentKanbanTasks(
       return {
         classroomName: classroom?.name ?? "Classroom",
         groupName: "Not assigned",
+        groupId: null,
         tasks: [],
       };
     }
@@ -662,6 +720,7 @@ export async function getStudentKanbanTasks(
     return {
       classroomName: classroom?.name ?? "Classroom",
       groupName: group.name,
+      groupId: group.id,
       tasks,
     };
   } catch {

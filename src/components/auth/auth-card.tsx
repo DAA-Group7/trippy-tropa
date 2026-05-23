@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
+import { signUpStudent } from "@/app/actions/auth";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -54,6 +55,7 @@ function authHref(mode: AuthMode, inviteCode?: string, redirect?: string) {
 export function AuthCard({ mode, inviteCode, redirect }: AuthCardProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const submitLock = useRef(false);
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -64,6 +66,10 @@ export function AuthCard({ mode, inviteCode, redirect }: AuthCardProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (submitLock.current || isPending) {
+      return;
+    }
 
     const parsedEmail = parseEmail(email);
     if (!parsedEmail.ok) {
@@ -92,6 +98,8 @@ export function AuthCard({ mode, inviteCode, redirect }: AuthCardProps) {
       : undefined;
 
     startTransition(async () => {
+      submitLock.current = true;
+      try {
       const supabase = createClient();
       const requested = redirect ?? fallbackRedirect;
 
@@ -114,7 +122,7 @@ export function AuthCard({ mode, inviteCode, redirect }: AuthCardProps) {
             message: error.message,
             rateLimited: isAuthRateLimitError(error.message),
           });
-          toast.error(formatAuthErrorMessage(error.message));
+          toast.error(formatAuthErrorMessage(error.message, error.code));
           return;
         }
 
@@ -153,68 +161,34 @@ export function AuthCard({ mode, inviteCode, redirect }: AuthCardProps) {
         return;
       }
 
-      const { data, error } = await supabase.auth.signUp({
-        email: normalizedEmail,
+      const result = await signUpStudent(
+        normalizedEmail,
         password,
-        options: {
-          data: {
-            full_name: fullName.trim(),
-            role: "student",
-          },
-        },
-      });
+        fullName.trim(),
+        { redirect: requested, inviteCode }
+      );
 
-      if (error) {
+      if (!result.ok) {
         log.warn("sign_up_failed", {
           email: maskEmail(normalizedEmail),
-          code: error.code,
-          message: error.message,
-          rateLimited: isAuthRateLimitError(error.message),
+          error: result.error,
+          rateLimited: isAuthRateLimitError(result.error),
         });
-        toast.error(formatAuthErrorMessage(error.message));
-        return;
-      }
-
-      if (!data.user) {
-        log.error("sign_up_no_user", { email: maskEmail(normalizedEmail) });
-        toast.error("Could not create account.");
-        return;
-      }
-
-      if (!data.session) {
-        log.info("sign_up_email_confirmation_required", {
-          userId: data.user.id.slice(0, 8) + "…",
-          email: maskEmail(normalizedEmail),
-        });
-        toast.info(
-          "Check your email to confirm your account, then sign in."
-        );
+        toast.error(result.error);
         return;
       }
 
       log.info("sign_up_success", {
-        userId: data.user.id.slice(0, 8) + "…",
         email: maskEmail(normalizedEmail),
+        redirectTo: result.redirectTo,
       });
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role, skills_completed")
-        .eq("id", data.user.id)
-        .maybeSingle();
-
-      const role = (profile?.role as UserRole) ?? "student";
-      const skillsCompleted = profile?.skills_completed ?? false;
-      const destination = resolvePostAuthRedirect(
-        role,
-        skillsCompleted,
-        requested,
-        inviteCode
-      );
-
       toast.success("Account created");
-      router.push(destination);
+      router.push(result.redirectTo);
       router.refresh();
+      } finally {
+        submitLock.current = false;
+      }
     });
   };
 

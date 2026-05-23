@@ -34,7 +34,7 @@ const navItems = [
     match: () => false,
   },
   {
-    href: routes.student.dashboard,
+    href: `${routes.student.dashboard}#updates`,
     label: "Notifications",
     icon: Bell,
     match: () => false,

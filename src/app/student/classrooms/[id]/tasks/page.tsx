@@ -29,6 +29,7 @@ export default async function StudentTasksPage({
       classroomId={id}
       classroomName={data.classroomName}
       groupName={data.groupName}
+      groupId={data.groupId}
       tasks={data.tasks}
     />
   );

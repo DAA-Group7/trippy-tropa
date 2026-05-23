@@ -7,64 +7,42 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowRight,
   Clock,
-  Filter,
   Link2,
-  MessageSquare,
   MoreHorizontal,
   Plus,
   Search,
-  Users,
-  AlertTriangle,
-  Bell,
 } from "lucide-react";
 import { toast } from "sonner";
+import type { NotificationItem } from "@/app/actions/notifications";
 import {
   DEMO_ACTIVE_TASKS,
   DEMO_STUDENT_CLASSROOMS,
-  DEMO_UPDATES,
   STUDENT_PROFILE,
 } from "@/lib/constants/student-dashboard-demo";
 import { BrandTitle } from "@/components/brand/brand-mark";
 import { SignOutButton } from "@/components/auth/sign-out-button";
+import { NotificationsBell } from "@/components/notifications/notifications-bell";
+import { NotificationsList } from "@/components/notifications/notifications-list";
+import { useNotificationsRealtime } from "@/hooks/use-notifications-realtime";
 import { routes } from "@/lib/constants/routes";
 import { cn } from "@/lib/utils";
 
 const cardShadow =
   "shadow-[0_1px_3px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.03)]";
 
-function UpdateIcon({ type }: { type: "group" | "warning" | "forum" }) {
-  const config = {
-    group: {
-      icon: Users,
-      bg: "bg-[#dbe1ff]",
-      text: "text-[#004ac6]",
-    },
-    warning: {
-      icon: AlertTriangle,
-      bg: "bg-[#ffdad6]",
-      text: "text-[#ba1a1a]",
-    },
-    forum: {
-      icon: MessageSquare,
-      bg: "bg-[#d3e4fe]",
-      text: "text-[#505f76]",
-    },
-  }[type];
-  const Icon = config.icon;
-  return (
-    <span
-      className={cn(
-        "inline-flex rounded-full p-1.5",
-        config.bg,
-        config.text
-      )}
-    >
-      <Icon className="size-4" />
-    </span>
-  );
+interface StudentDashboardViewProps {
+  userId: string;
+  initialNotifications: NotificationItem[];
 }
 
-export function StudentDashboardView() {
+export function StudentDashboardView({
+  userId,
+  initialNotifications,
+}: StudentDashboardViewProps) {
+  const { items, setItems } = useNotificationsRealtime(
+    userId,
+    initialNotifications
+  );
   const searchParams = useSearchParams();
   const router = useRouter();
   const assignmentsDue = 3;
@@ -102,14 +80,13 @@ export function StudentDashboardView() {
           <div className="md:hidden">
             <SignOutButton variant="compact" />
           </div>
-          <button
-            type="button"
-            className="relative rounded-full p-2 text-[#004ac6] transition-colors hover:bg-[#e7e7f3]"
-            aria-label="Notifications"
-          >
-            <Bell className="size-5" />
-            <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-[#ba1a1a]" />
-          </button>
+          {userId ? (
+            <NotificationsBell
+              userId={userId}
+              initialNotifications={initialNotifications}
+              iconClassName="text-[#004ac6]"
+            />
+          ) : null}
           <Image
             src={STUDENT_PROFILE.avatarUrl}
             alt=""
@@ -219,16 +196,17 @@ export function StudentDashboardView() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-4 md:col-span-4">
+          <div
+            id="updates"
+            className="flex flex-col gap-4 md:col-span-4"
+          >
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-[#191b23]">Updates</h3>
-              <button
-                type="button"
-                className="text-[#737686] transition-colors hover:text-[#004ac6]"
-                aria-label="Filter"
-              >
-                <Filter className="size-5" />
-              </button>
+              {items.some((n) => !n.read) && (
+                <span className="text-xs font-medium text-[#004ac6]">
+                  {items.filter((n) => !n.read).length} unread
+                </span>
+              )}
             </div>
             <div
               className={cn(
@@ -236,37 +214,11 @@ export function StudentDashboardView() {
                 cardShadow
               )}
             >
-              {DEMO_UPDATES.map((update, i) => (
-                <div
-                  key={update.id}
-                  className={cn(
-                    "flex cursor-pointer gap-3 border-b border-[#c3c6d7] p-4 transition-colors hover:bg-[#f3f3fe]",
-                    update.highlighted && "bg-[#f3f3fe]",
-                    i === DEMO_UPDATES.length - 1 && "border-b-0"
-                  )}
-                >
-                  <UpdateIcon type={update.icon} />
-                  <div>
-                    <p className="text-sm text-[#191b23]">
-                      {update.highlight && (
-                        <span className="font-bold">{update.highlight} </span>
-                      )}
-                      {update.message}
-                    </p>
-                    <span className="mt-1 block text-xs text-[#434655]">
-                      {update.time}
-                    </span>
-                  </div>
-                </div>
-              ))}
-              <div className="border-t border-[#c3c6d7] bg-[#e7e7f3] p-3 text-center">
-                <button
-                  type="button"
-                  className="text-xs font-semibold uppercase tracking-wide text-[#004ac6] hover:underline"
-                >
-                  View All Notifications
-                </button>
-              </div>
+              <NotificationsList
+                items={items}
+                onItemsChange={setItems}
+                emptyMessage="No updates yet. Join a classroom or wait for group and task assignments."
+              />
             </div>
           </div>
 

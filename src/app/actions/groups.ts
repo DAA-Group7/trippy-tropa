@@ -7,6 +7,7 @@ import {
   initialsFromName,
 } from "@/lib/groups/helpers";
 import { buildJoinUrl } from "@/lib/invite";
+import { notifyGroupAssignments } from "@/app/actions/notifications";
 import { createClient } from "@/lib/supabase/server";
 import { routes } from "@/lib/constants/routes";
 import { createLogger, maskUserId } from "@/lib/logger";
@@ -307,6 +308,12 @@ export async function publishGroups(
       return { ok: false, error: deleteError.message };
     }
 
+    const notifyRows: {
+      userId: string;
+      groupName: string;
+      groupId: string;
+    }[] = [];
+
     for (const group of groups) {
       const { data: inserted, error: groupError } = await ctx.supabase
         .from("groups")
@@ -336,8 +343,18 @@ export async function publishGroups(
         if (membersError) {
           return { ok: false, error: membersError.message };
         }
+
+        for (const userId of group.memberIds) {
+          notifyRows.push({
+            userId,
+            groupName: group.name,
+            groupId: inserted.id,
+          });
+        }
       }
     }
+
+    await notifyGroupAssignments(classroomId, notifyRows);
 
     revalidatePath(routes.officer.dashboard);
     revalidatePath(routes.officer.classroom(classroomId));

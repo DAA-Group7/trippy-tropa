@@ -12,6 +12,7 @@ import {
   Users,
 } from "lucide-react";
 import type { OfficerDashboardData } from "@/app/actions/classrooms";
+import type { NotificationItem } from "@/app/actions/notifications";
 import { OfficerTopBar } from "@/components/layout/officer-top-bar";
 import { ClassroomCard, NewClassroomCard } from "@/components/officer/classroom-card";
 import { routes } from "@/lib/constants/routes";
@@ -22,6 +23,8 @@ const cardShadow =
 
 interface OfficerDashboardViewProps {
   data: OfficerDashboardData;
+  userId: string;
+  initialNotifications: NotificationItem[];
 }
 
 function StatCard({
@@ -72,7 +75,11 @@ function StatCard({
   );
 }
 
-export function OfficerDashboardView({ data }: OfficerDashboardViewProps) {
+export function OfficerDashboardView({
+  data,
+  userId,
+  initialNotifications,
+}: OfficerDashboardViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredClassrooms = useMemo(() => {
@@ -101,6 +108,8 @@ export function OfficerDashboardView({ data }: OfficerDashboardViewProps) {
       <OfficerTopBar
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
+        userId={userId}
+        initialNotifications={initialNotifications}
       />
 
       <div className="mx-auto w-full max-w-[1280px] flex-1 p-4 md:p-10">

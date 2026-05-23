@@ -40,6 +40,7 @@ cp .env.example .env
    - `004_seed_dev_users.sql`
    - `005_fix_auth_users_tokens.sql`
    - `006_task_required_skills.sql`
+   - `007_notifications_realtime.sql`
 3. Enable **Email** auth under Authentication → Providers (confirm email can be off for local dev).
 4. Dev logins — see [supabase/SEED_USERS.md](supabase/SEED_USERS.md).
 
