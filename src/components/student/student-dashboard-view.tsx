@@ -87,8 +87,8 @@ export function StudentDashboardView({
           </div>
           {userId ? (
             <NotificationsBell
-              userId={userId}
-              initialNotifications={initialNotifications}
+              items={items}
+              onItemsChange={setItems}
               iconClassName="text-[#004ac6]"
             />
           ) : null}

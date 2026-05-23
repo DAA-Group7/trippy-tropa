@@ -73,6 +73,7 @@ export type ClassroomRosterStudent = {
   email: string;
   skillsCompleted: boolean;
   averageSkill: number | null;
+  skills: SkillRatings | null;
   joinedAt: string;
 };
 
@@ -284,6 +285,7 @@ export async function getClassroomDetailFull(
         email,
         skillsCompleted: profile?.skills_completed ?? false,
         averageSkill: ratings ? averageSkillRating(ratings) : null,
+        skills: ratings,
         joinedAt: member.joined_at as string,
       };
     });

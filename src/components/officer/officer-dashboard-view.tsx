@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import type { OfficerDashboardData } from "@/app/actions/classrooms";
 import type { NotificationItem } from "@/app/actions/notifications";
+import { useNotificationsRealtime } from "@/hooks/use-notifications-realtime";
 import { OfficerTopBar } from "@/components/layout/officer-top-bar";
 import { ClassroomCard, NewClassroomCard } from "@/components/officer/classroom-card";
 import { routes } from "@/lib/constants/routes";
@@ -81,6 +82,8 @@ export function OfficerDashboardView({
   initialNotifications,
 }: OfficerDashboardViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const { items: notificationItems, setItems: setNotificationItems } =
+    useNotificationsRealtime(userId, initialNotifications);
 
   const filteredClassrooms = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -108,8 +111,8 @@ export function OfficerDashboardView({
       <OfficerTopBar
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
-        userId={userId}
-        initialNotifications={initialNotifications}
+        notificationItems={notificationItems}
+        onNotificationItemsChange={setNotificationItems}
       />
 
       <div className="mx-auto w-full max-w-[1280px] flex-1 p-4 md:p-10">

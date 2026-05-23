@@ -3,29 +3,25 @@
 import { useEffect, useRef, useState } from "react";
 import { Bell } from "lucide-react";
 import type { NotificationItem } from "@/app/actions/notifications";
-import { useNotificationsRealtime } from "@/hooks/use-notifications-realtime";
 import { NotificationsList } from "@/components/notifications/notifications-list";
 import { cn } from "@/lib/utils";
 
 interface NotificationsBellProps {
-  userId: string;
-  initialNotifications: NotificationItem[];
+  items: NotificationItem[];
+  onItemsChange: (items: NotificationItem[]) => void;
   className?: string;
   iconClassName?: string;
 }
 
 export function NotificationsBell({
-  userId,
-  initialNotifications,
+  items,
+  onItemsChange,
   className,
   iconClassName = "text-[#434655]",
 }: NotificationsBellProps) {
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
-  const { items, unreadCount, setItems } = useNotificationsRealtime(
-    userId,
-    initialNotifications
-  );
+  const unreadCount = items.filter((n) => !n.read).length;
 
   useEffect(() => {
     if (!open) return;
@@ -66,7 +62,7 @@ export function NotificationsBell({
 
       {open && (
         <div
-          className="absolute right-0 top-full z-50 mt-2 w-[min(100vw-2rem,22rem)] overflow-hidden rounded-xl border border-[#c3c6d7] bg-white shadow-[0_10px_25px_-5px_rgba(0,0,0,0.12)]"
+          className="absolute right-0 top-full z-50 mt-2 w-[min(100vw-2rem,22rem)] overflow-hidden rounded-xl border border-[#c3c6d7] bg-white shadow-[0_10px_25px_-5px_rgba(0,0,0,0.08)]"
           role="dialog"
           aria-label="Notifications"
         >
@@ -77,7 +73,7 @@ export function NotificationsBell({
           </div>
           <NotificationsList
             items={items}
-            onItemsChange={setItems}
+            onItemsChange={onItemsChange}
             compact
             emptyMessage="You're all caught up."
           />

@@ -8,16 +8,16 @@ interface OfficerTopBarProps {
   searchQuery: string;
   onSearchChange: (value: string) => void;
   searchPlaceholder?: string;
-  userId?: string;
-  initialNotifications?: NotificationItem[];
+  notificationItems?: NotificationItem[];
+  onNotificationItemsChange?: (items: NotificationItem[]) => void;
 }
 
 export function OfficerTopBar({
   searchQuery,
   onSearchChange,
   searchPlaceholder = "Search classrooms, students...",
-  userId,
-  initialNotifications = [],
+  notificationItems,
+  onNotificationItemsChange,
 }: OfficerTopBarProps) {
   return (
     <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between gap-4 border-b border-[#c3c6d7] bg-white px-4 md:px-6">
@@ -32,10 +32,10 @@ export function OfficerTopBar({
           className="w-full border-0 bg-transparent text-sm text-stitch-text placeholder:text-stitch-text-nav focus:outline-none focus:ring-0"
         />
       </div>
-      {userId ? (
+      {notificationItems && onNotificationItemsChange ? (
         <NotificationsBell
-          userId={userId}
-          initialNotifications={initialNotifications}
+          items={notificationItems}
+          onItemsChange={onNotificationItemsChange}
         />
       ) : null}
     </header>

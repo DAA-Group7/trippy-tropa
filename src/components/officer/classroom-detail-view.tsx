@@ -2,6 +2,14 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { SKILL_DEFINITIONS } from "@/lib/constants/skills";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   ArrowLeft,
   ChevronRight,
@@ -51,7 +59,13 @@ function StudentAvatar({ student }: { student: ClassroomRosterStudent }) {
   );
 }
 
-function StudentRow({ student }: { student: ClassroomRosterStudent }) {
+function StudentRow({
+  student,
+  onSelect,
+}: {
+  student: ClassroomRosterStudent;
+  onSelect: (student: ClassroomRosterStudent) => void;
+}) {
   const skillLabel = student.averageSkill
     ? `${student.averageSkill} / 5 avg`
     : student.skillsCompleted
@@ -59,7 +73,11 @@ function StudentRow({ student }: { student: ClassroomRosterStudent }) {
       : "Not assessed";
 
   return (
-    <div className="group flex items-center justify-between rounded-lg border border-transparent p-4 transition-colors hover:border-[#c3c6d7] hover:bg-[#f3f3fe]">
+    <button
+      type="button"
+      onClick={() => onSelect(student)}
+      className="group flex w-full items-center justify-between rounded-lg border border-transparent p-4 text-left transition-colors hover:border-[#c3c6d7] hover:bg-[#f3f3fe] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#004ac6] focus-visible:ring-offset-2"
+    >
       <div className="flex items-center gap-4">
         <StudentAvatar student={student} />
         <div>
@@ -76,9 +94,93 @@ function StudentRow({ student }: { student: ClassroomRosterStudent }) {
           </p>
           <p className="text-base font-medium text-[#191b23]">{skillLabel}</p>
         </div>
-        <ChevronRight className="size-5 text-[#737686] transition-colors group-hover:text-[#004ac6]" />
+        <ChevronRight
+          className="size-5 text-[#737686] transition-colors group-hover:text-[#004ac6]"
+          aria-hidden
+        />
       </div>
-    </div>
+    </button>
+  );
+}
+
+function StudentDetailSheet({
+  student,
+  open,
+  onOpenChange,
+}: {
+  student: ClassroomRosterStudent | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  if (!student) return null;
+
+  const joinedLabel = new Date(student.joinedAt).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-full sm:max-w-md">
+        <SheetHeader>
+          <SheetTitle>{student.name}</SheetTitle>
+          <SheetDescription>{student.email}</SheetDescription>
+        </SheetHeader>
+
+        <div className="space-y-6 px-4 pb-6">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#505f76]">
+              Enrolled
+            </p>
+            <p className="mt-1 text-sm text-[#191b23]">{joinedLabel}</p>
+          </div>
+
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#505f76]">
+              Skill assessment
+            </p>
+            <p className="mt-1 text-sm text-[#191b23]">
+              {student.skillsCompleted
+                ? student.averageSkill
+                  ? `Complete — ${student.averageSkill} / 5 average`
+                  : "Marked complete"
+                : "Not completed yet"}
+            </p>
+          </div>
+
+          {student.skills ? (
+            <ul className="space-y-3">
+              {SKILL_DEFINITIONS.map((def) => {
+                const value = student.skills![def.key];
+                const percent = (value / 5) * 100;
+                return (
+                  <li key={def.key}>
+                    <div className="mb-1 flex justify-between text-sm">
+                      <span className="font-medium text-[#191b23]">
+                        {def.label}
+                      </span>
+                      <span className="text-[#434655]">{value} / 5</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-[#e7e7f3]">
+                      <div
+                        className="h-full rounded-full bg-[#004ac6]"
+                        style={{ width: `${percent}%` }}
+                      />
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="text-sm text-[#505f76]">
+              This student has not submitted skill ratings yet. They will appear
+              here after onboarding.
+            </p>
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }
 
@@ -87,6 +189,14 @@ export function ClassroomDetailView({
   classroomId,
 }: ClassroomDetailViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedStudent, setSelectedStudent] =
+    useState<ClassroomRosterStudent | null>(null);
+  const [studentSheetOpen, setStudentSheetOpen] = useState(false);
+
+  const openStudent = (student: ClassroomRosterStudent) => {
+    setSelectedStudent(student);
+    setStudentSheetOpen(true);
+  };
 
   const filteredStudents = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -366,7 +476,11 @@ export function ClassroomDetailView({
                   ) : (
                     <div className="flex flex-col gap-2">
                       {filteredStudents.map((student) => (
-                        <StudentRow key={student.id} student={student} />
+                        <StudentRow
+                          key={student.id}
+                          student={student}
+                          onSelect={openStudent}
+                        />
                       ))}
                       {filteredStudents.length === 0 && (
                         <p className="py-8 text-center text-sm text-[#505f76]">
@@ -381,6 +495,11 @@ export function ClassroomDetailView({
           </div>
         </div>
       </div>
+      <StudentDetailSheet
+        student={selectedStudent}
+        open={studentSheetOpen}
+        onOpenChange={setStudentSheetOpen}
+      />
     </>
   );
 }
