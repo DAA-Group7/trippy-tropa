@@ -88,8 +88,13 @@ export function OfficerDashboardView({ data }: OfficerDashboardViewProps) {
 
   const formatStudentsHint =
     data.stats.totalStudents > 0
-      ? "Enrolled across all classrooms"
-      : "Enroll students via invite links";
+      ? "Enrolled in your classrooms"
+      : "Share invite links to enroll students";
+
+  const formatGroupsHint =
+    data.stats.groupsCreated > 0
+      ? "In your classrooms"
+      : "Generate groups from a classroom";
 
   return (
     <>
@@ -130,7 +135,7 @@ export function OfficerDashboardView({ data }: OfficerDashboardViewProps) {
           <StatCard
             label="Groups Created"
             value={data.stats.groupsCreated}
-            hint="Across all classrooms"
+            hint={formatGroupsHint}
             hintIcon={Minus}
             icon={Layers}
             iconBg="bg-[#d3e4fe]"
