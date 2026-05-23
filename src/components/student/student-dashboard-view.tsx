@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils";
 
 interface StudentDashboardViewProps {
   userId: string;
+  studentFirstName: string;
   initialNotifications: NotificationItem[];
   classrooms: StudentDashboardClassroom[];
   activeTasks: StudentDashboardActiveTask[];
@@ -37,6 +38,7 @@ interface StudentDashboardViewProps {
 
 export function StudentDashboardView({
   userId,
+  studentFirstName,
   initialNotifications,
   classrooms,
   activeTasks,
@@ -92,7 +94,7 @@ export function StudentDashboardView({
           ) : null}
           <Image
             src={STUDENT_PROFILE.avatarUrl}
-            alt={`${STUDENT_PROFILE.firstName} profile`}
+            alt={`${studentFirstName} profile`}
             width={32}
             height={32}
             className="size-8 cursor-pointer rounded-full border border-[#c3c6d7] object-cover"
@@ -105,7 +107,7 @@ export function StudentDashboardView({
         <section className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 className="font-heading text-3xl font-bold tracking-tight text-[#191b23] sm:text-4xl md:text-5xl">
-              Welcome back, {STUDENT_PROFILE.firstName}.
+              Welcome back, {studentFirstName}.
             </h2>
             <p className="mt-1 text-lg text-stitch-text-secondary">
               {assignmentsDue === 0
@@ -226,8 +228,8 @@ export function StudentDashboardView({
             </div>
             <div
               className={cn(
-                "overflow-hidden rounded-xl border border-[#c3c6d7] bg-white",
-                cardShadow
+                "overflow-hidden rounded-xl border border-stitch-border bg-stitch-surface",
+                stitch.cardShadow
               )}
             >
               <NotificationsList

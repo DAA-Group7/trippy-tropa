@@ -63,18 +63,21 @@ export async function getNotifications(
     .order("created_at", { ascending: false })
     .limit(limit);
 
-  return (data ?? []).map((n) => ({
+  return (data ?? []).map((n) => {
+    const kind = (n.kind as NotificationKind | null) ?? "task_updated";
+    return {
     id: n.id,
     title: n.title,
     body: n.body,
-    kind: n.kind as NotificationKind,
-    icon: iconForKind(n.kind as NotificationKind),
+    kind,
+    icon: iconForKind(kind),
     read: n.read,
     createdAt: n.created_at,
     timeAgo: formatTimeAgo(n.created_at),
     classroomId: n.classroom_id,
     relatedId: n.related_id,
-  }));
+  };
+  });
 }
 
 export async function getUnreadNotificationCount(): Promise<number> {

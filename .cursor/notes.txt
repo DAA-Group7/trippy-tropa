@@ -1,0 +1,2 @@
+- implement and create documentation for Hungarian Algorithm for task assignment
+- implement and create documentation for Greedy Algorithm for task assignment (Greedy Balancing / Greedy Load Balancing Algorithm)
