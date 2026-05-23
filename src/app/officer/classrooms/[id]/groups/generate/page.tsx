@@ -1,4 +1,5 @@
-import { getClassroomBrief } from "@/app/actions/classrooms";
+import { notFound } from "next/navigation";
+import { getGroupGenerationContext } from "@/app/actions/groups";
 import { GroupGenerationView } from "@/components/officer/group-generation-view";
 
 export const metadata = { title: "Group Generation" };
@@ -9,12 +10,11 @@ export default async function GenerateGroupsPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const classroom = await getClassroomBrief(id);
+  const context = await getGroupGenerationContext(id);
 
-  return (
-    <GroupGenerationView
-      classroomName={classroom?.name ?? "Your classroom"}
-      inviteUrl={classroom?.inviteUrl ?? null}
-    />
-  );
+  if (!context) {
+    notFound();
+  }
+
+  return <GroupGenerationView context={context} />;
 }
