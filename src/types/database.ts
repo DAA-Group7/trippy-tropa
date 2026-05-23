@@ -51,4 +51,7 @@ export interface Task {
   assigned_to: string | null;
   deadline: string | null;
   estimated_hours: number | null;
+  required_skills?: Partial<SkillRatings>;
+  assignment_match_score?: number | null;
+  assignment_reason?: string | null;
 }

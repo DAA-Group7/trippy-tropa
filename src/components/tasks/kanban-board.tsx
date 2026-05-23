@@ -1,36 +1,23 @@
 "use client";
 
+import { useState, useTransition } from "react";
 import {
   DndContext,
   DragOverlay,
-  closestCorners,
-  type DragEndEvent,
-  type DragStartEvent,
   PointerSensor,
+  useDraggable,
+  useDroppable,
   useSensor,
   useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
 } from "@dnd-kit/core";
-import {
-  SortableContext,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import { useState } from "react";
 import { GripVertical } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { updateTaskStatus } from "@/app/actions/tasks";
+import type { KanbanTaskData } from "@/app/actions/tasks";
 import type { TaskStatus } from "@/types/database";
-
-export interface KanbanTask {
-  id: string;
-  title: string;
-  assignee: string;
-  deadline: string;
-  estimatedHours: number;
-  status: TaskStatus;
-}
+import { cn } from "@/lib/utils";
 
 const COLUMNS: { id: TaskStatus; title: string }[] = [
   { id: "todo", title: "To Do" },
@@ -39,69 +26,130 @@ const COLUMNS: { id: TaskStatus; title: string }[] = [
   { id: "done", title: "Done" },
 ];
 
-const DEMO_TASKS: KanbanTask[] = [
-  {
-    id: "1",
-    title: "Research outline",
-    assignee: "You",
-    deadline: "May 28",
-    estimatedHours: 3,
-    status: "todo",
-  },
-  {
-    id: "2",
-    title: "Draft introduction",
-    assignee: "Alex",
-    deadline: "May 30",
-    estimatedHours: 4,
-    status: "in_progress",
-  },
-];
+const cardShadow =
+  "shadow-[0_1px_3px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.03)]";
 
-function TaskCard({ task }: { task: KanbanTask }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: task.id });
-
+function KanbanCardContent({
+  task,
+  dragHandleProps,
+  isDragging,
+  setNodeRef,
+}: {
+  task: KanbanTaskData;
+  dragHandleProps?: Record<string, unknown>;
+  isDragging?: boolean;
+  setNodeRef?: (node: HTMLElement | null) => void;
+}) {
   return (
-    <Card
+    <div
       ref={setNodeRef}
-      style={{
-        transform: CSS.Transform.toString(transform),
-        transition,
-      }}
-      className={cn("cursor-grab shadow-sm", isDragging && "opacity-50")}
+      className={cn(
+        "rounded-xl border border-[#c3c6d7] bg-white p-3",
+        cardShadow,
+        isDragging && "opacity-50",
+        !task.canDrag && "opacity-90"
+      )}
     >
-      <CardHeader className="flex flex-row items-start gap-2 space-y-0 p-3 pb-0">
-        <button
-          type="button"
-          className="mt-0.5 text-muted-foreground"
-          {...attributes}
-          {...listeners}
-        >
-          <GripVertical className="size-4" />
-        </button>
-        <CardTitle className="text-sm font-medium leading-snug">
-          {task.title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-2 p-3 pt-2 text-xs text-muted-foreground">
-        <p>Assigned: {task.assignee}</p>
-        <p>Due: {task.deadline}</p>
-        <Badge variant="secondary">{task.estimatedHours}h est.</Badge>
-      </CardContent>
-    </Card>
+      <div className="flex items-start gap-2">
+        {task.canDrag ? (
+          <button
+            type="button"
+            className="mt-0.5 cursor-grab touch-none text-[#737686] active:cursor-grabbing"
+            {...dragHandleProps}
+          >
+            <GripVertical className="size-4" />
+          </button>
+        ) : (
+          <span className="mt-0.5 size-4" />
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium leading-snug text-[#191b23]">
+            {task.title}
+          </p>
+          <p className="mt-1 text-xs text-[#434655]">
+            Assigned: {task.assignee}
+          </p>
+          <p className="text-xs text-[#505f76]">Due: {task.deadline}</p>
+          <span className="mt-2 inline-block rounded-full bg-[#e7e7f3] px-2 py-0.5 text-xs font-medium text-[#434655]">
+            {task.estimatedHours}h est.
+          </span>
+          {!task.canDrag && (
+            <p className="mt-1 text-[10px] text-[#737686]">View only</p>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
-export function KanbanBoard({ initialTasks = DEMO_TASKS }: { initialTasks?: KanbanTask[] }) {
+function DraggableKanbanCard({ task }: { task: KanbanTaskData }) {
+  if (!task.canDrag) {
+    return <KanbanCardContent task={task} />;
+  }
+
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: task.id,
+  });
+
+  return (
+    <KanbanCardContent
+      task={task}
+      dragHandleProps={{ ...attributes, ...listeners }}
+      isDragging={isDragging}
+      setNodeRef={setNodeRef}
+    />
+  );
+}
+
+function DroppableColumn({
+  column,
+  tasks,
+}: {
+  column: (typeof COLUMNS)[number];
+  tasks: KanbanTaskData[];
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: column.id });
+  const colTasks = tasks.filter((t) => t.status === column.id);
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        "flex min-h-[280px] flex-col rounded-xl border bg-[#f3f3fe]/80 p-3 transition-colors",
+        isOver ? "border-[#004ac6] ring-2 ring-[#004ac6]/15" : "border-[#c3c6d7]"
+      )}
+    >
+      <h3 className="mb-3 text-sm font-semibold text-[#191b23]">
+        {column.title}
+        <span className="ml-2 text-xs font-normal text-[#505f76]">
+          ({colTasks.length})
+        </span>
+      </h3>
+      <div className="flex flex-1 flex-col gap-2">
+        {colTasks.map((task) => (
+          <DraggableKanbanCard key={task.id} task={task} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+interface KanbanBoardProps {
+  initialTasks: KanbanTaskData[];
+}
+
+export function KanbanBoard({ initialTasks }: KanbanBoardProps) {
   const [tasks, setTasks] = useState(initialTasks);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
 
   const handleDragStart = (event: DragStartEvent) => {
+    const task = tasks.find((t) => t.id === event.active.id);
+    if (!task?.canDrag) return;
     setActiveId(String(event.active.id));
   };
 
@@ -110,53 +158,66 @@ export function KanbanBoard({ initialTasks = DEMO_TASKS }: { initialTasks?: Kanb
     setActiveId(null);
     if (!over) return;
 
-    const overId = String(over.id);
-    const column = COLUMNS.find((c) => c.id === overId);
-    if (!column) return;
+    const taskId = String(active.id);
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task?.canDrag) return;
+
+    const newStatus = COLUMNS.find((c) => c.id === over.id)?.id;
+    if (!newStatus || newStatus === task.status) return;
+
+    const previousStatus = task.status;
 
     setTasks((prev) =>
-      prev.map((t) =>
-        t.id === active.id ? { ...t, status: column.id } : t
-      )
+      prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t))
     );
+
+    startTransition(async () => {
+      const result = await updateTaskStatus({ taskId, status: newStatus });
+      if (!result.ok) {
+        toast.error(result.error);
+        setTasks((prev) =>
+          prev.map((t) =>
+            t.id === taskId ? { ...t, status: previousStatus } : t
+          )
+        );
+      }
+    });
   };
 
   const activeTask = tasks.find((t) => t.id === activeId);
 
-  return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCorners}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-    >
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {COLUMNS.map((col) => {
-          const colTasks = tasks.filter((t) => t.status === col.id);
-          return (
-            <div
-              key={col.id}
-              id={col.id}
-              className="flex min-h-[280px] flex-col rounded-xl border border-border bg-muted/30 p-3"
-            >
-              <h3 className="mb-3 text-sm font-semibold">{col.title}</h3>
-              <SortableContext
-                items={colTasks.map((t) => t.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                <div className="flex flex-1 flex-col gap-2">
-                  {colTasks.map((task) => (
-                    <TaskCard key={task.id} task={task} />
-                  ))}
-                </div>
-              </SortableContext>
-            </div>
-          );
-        })}
+  if (tasks.length === 0) {
+    return (
+      <div className="rounded-xl border border-dashed border-[#c3c6d7] bg-white p-12 text-center">
+        <p className="text-sm text-[#505f76]">
+          No tasks in your group yet. Your officer will add tasks soon.
+        </p>
       </div>
-      <DragOverlay>
-        {activeTask ? <TaskCard task={activeTask} /> : null}
-      </DragOverlay>
-    </DndContext>
+    );
+  }
+
+  return (
+    <div className={cn(isPending && "pointer-events-none opacity-80")}>
+      <DndContext
+        sensors={sensors}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {COLUMNS.map((col) => (
+            <DroppableColumn key={col.id} column={col} tasks={tasks} />
+          ))}
+        </div>
+        <DragOverlay>
+          {activeTask ? (
+            <KanbanCardContent task={activeTask} isDragging />
+          ) : null}
+        </DragOverlay>
+      </DndContext>
+      <p className="mt-4 text-xs text-[#505f76]">
+        Drag cards you are assigned to between columns. Other members&apos;
+        tasks are view-only.
+      </p>
+    </div>
   );
 }
