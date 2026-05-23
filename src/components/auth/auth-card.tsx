@@ -13,7 +13,12 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { normalizeEmail, parseEmail } from "@/lib/auth/email";
+import {
+  formatAuthErrorMessage,
+  isAuthRateLimitError,
+} from "@/lib/auth/errors";
 import { resolvePostAuthRedirect } from "@/lib/auth/join-flow";
+import { createLogger, maskEmail } from "@/lib/logger";
 import { buildJoinUrl } from "@/lib/invite";
 import { APP_NAME } from "@/lib/constants/brand";
 import { routes } from "@/lib/constants/routes";
@@ -26,6 +31,8 @@ const inputClass =
 
 const cardShadow =
   "shadow-[0_1px_3px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.03)]";
+
+const log = createLogger("auth:client");
 
 export type AuthMode = "login" | "register";
 
@@ -88,6 +95,12 @@ export function AuthCard({ mode, inviteCode, redirect }: AuthCardProps) {
       const supabase = createClient();
       const requested = redirect ?? fallbackRedirect;
 
+      log.info(isLogin ? "sign_in_attempt" : "sign_up_attempt", {
+        email: maskEmail(normalizedEmail),
+        mode: isLogin ? "login" : "register",
+        hasInviteCode: Boolean(inviteCode),
+      });
+
       if (isLogin) {
         const { data, error } = await supabase.auth.signInWithPassword({
           email: normalizedEmail,
@@ -95,9 +108,19 @@ export function AuthCard({ mode, inviteCode, redirect }: AuthCardProps) {
         });
 
         if (error) {
-          toast.error(error.message);
+          log.warn("sign_in_failed", {
+            email: maskEmail(normalizedEmail),
+            code: error.code,
+            message: error.message,
+            rateLimited: isAuthRateLimitError(error.message),
+          });
+          toast.error(formatAuthErrorMessage(error.message));
           return;
         }
+
+        log.info("sign_in_success", {
+          userId: data.user.id.slice(0, 8) + "…",
+        });
 
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
@@ -106,6 +129,10 @@ export function AuthCard({ mode, inviteCode, redirect }: AuthCardProps) {
           .maybeSingle();
 
         if (profileError || !profile) {
+          log.error("profile_missing_after_sign_in", {
+            userId: data.user.id.slice(0, 8) + "…",
+            profileError: profileError?.message,
+          });
           toast.error(
             "Profile not found. Run migrations 003–004 and seed users in Supabase."
           );
@@ -119,6 +146,7 @@ export function AuthCard({ mode, inviteCode, redirect }: AuthCardProps) {
           inviteCode
         );
 
+        log.debug("sign_in_redirect", { destination, role: profile.role });
         toast.success("Signed in");
         router.push(destination);
         router.refresh();
@@ -137,21 +165,37 @@ export function AuthCard({ mode, inviteCode, redirect }: AuthCardProps) {
       });
 
       if (error) {
-        toast.error(error.message);
+        log.warn("sign_up_failed", {
+          email: maskEmail(normalizedEmail),
+          code: error.code,
+          message: error.message,
+          rateLimited: isAuthRateLimitError(error.message),
+        });
+        toast.error(formatAuthErrorMessage(error.message));
         return;
       }
 
       if (!data.user) {
+        log.error("sign_up_no_user", { email: maskEmail(normalizedEmail) });
         toast.error("Could not create account.");
         return;
       }
 
       if (!data.session) {
+        log.info("sign_up_email_confirmation_required", {
+          userId: data.user.id.slice(0, 8) + "…",
+          email: maskEmail(normalizedEmail),
+        });
         toast.info(
           "Check your email to confirm your account, then sign in."
         );
         return;
       }
+
+      log.info("sign_up_success", {
+        userId: data.user.id.slice(0, 8) + "…",
+        email: maskEmail(normalizedEmail),
+      });
 
       const { data: profile } = await supabase
         .from("profiles")

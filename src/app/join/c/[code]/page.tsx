@@ -12,6 +12,9 @@ import {
 import { JoinClassroomView } from "@/components/join/join-classroom-view";
 import { JoinInviteNotFound } from "@/components/join/join-invite-not-found";
 import { routes } from "@/lib/constants/routes";
+import { createLogger } from "@/lib/logger";
+
+const log = createLogger("join:page");
 
 export const metadata = { title: "Join a Classroom" };
 
@@ -24,11 +27,19 @@ export default async function JoinByCodePage({
   const classroom = await getClassroomByInviteCode(code);
 
   if (!classroom) {
+    log.warn("invite_not_found", { code });
     return <JoinInviteNotFound code={code} />;
   }
 
   const { user, profile } = await getSessionUser();
   const decision = decideInviteLanding(code, user, profile, true);
+
+  log.info("invite_landing", {
+    code,
+    decision: decision.type,
+    authenticated: Boolean(user),
+    role: profile?.role,
+  });
 
   switch (decision.type) {
     case "auth_required":

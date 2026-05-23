@@ -13,6 +13,9 @@ import {
 } from "@/lib/constants/skills";
 import { buildJoinUrl } from "@/lib/invite";
 import { routes } from "@/lib/constants/routes";
+import { createLogger } from "@/lib/logger";
+
+const log = createLogger("onboarding:skills");
 import type { SkillKey } from "@/types/database";
 import { cn } from "@/lib/utils";
 
@@ -151,12 +154,16 @@ export function SkillAssessmentView({ inviteCode }: SkillAssessmentViewProps) {
     }
 
     startTransition(async () => {
+      log.info("complete_attempt", { hasInviteCode: Boolean(inviteCode) });
       const result = await completeSkillAssessment(ratings, inviteCode);
 
       if (!result.ok) {
+        log.warn("complete_failed", { error: result.error });
         toast.error(result.error);
         return;
       }
+
+      log.info("complete_success", { redirectTo: result.redirectTo });
 
       toast.success(
         inviteCode

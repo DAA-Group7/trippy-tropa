@@ -9,7 +9,10 @@ import {
 import { buildJoinUrl } from "@/lib/invite";
 import { createClient } from "@/lib/supabase/server";
 import { routes } from "@/lib/constants/routes";
+import { createLogger, maskUserId } from "@/lib/logger";
 import type { SkillRatings } from "@/types/database";
+
+const log = createLogger("groups");
 
 const publishGroupSchema = z.object({
   name: z.string().min(1),
@@ -241,9 +244,15 @@ export async function publishGroups(
 
   const { classroomId, groups } = parsed.data;
 
+  log.info("publish_attempt", {
+    classroomId,
+    groupCount: groups.length,
+  });
+
   try {
     const ctx = await getOfficerContext();
     if (!ctx) {
+      log.warn("publish_unauthenticated");
       return { ok: false, error: "You must be signed in as an officer." };
     }
 
@@ -336,8 +345,17 @@ export async function publishGroups(
     revalidatePath(routes.officer.generateGroups(classroomId));
     revalidatePath(routes.student.group(classroomId));
 
+    log.info("publish_success", {
+      classroomId,
+      groupCount: groups.length,
+      officerId: maskUserId(ctx.userId),
+    });
+
     return { ok: true };
-  } catch {
+  } catch (err) {
+    log.error("publish_exception", {
+      message: err instanceof Error ? err.message : "unknown",
+    });
     return { ok: false, error: "Could not save groups." };
   }
 }

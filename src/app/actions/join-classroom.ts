@@ -3,7 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { routes } from "@/lib/constants/routes";
+import { createLogger, maskUserId } from "@/lib/logger";
 import type { SkillRatings } from "@/types/database";
+
+const log = createLogger("join");
 
 export type ClassroomPreview = {
   id: string;
@@ -32,7 +35,18 @@ export async function getClassroomByInviteCode(
     .eq("invite_code", code)
     .maybeSingle();
 
-  if (error || !data) return null;
+  if (error || !data) {
+    log.debug("classroom_lookup_miss", {
+      code,
+      error: error?.message,
+    });
+    return null;
+  }
+
+  log.debug("classroom_lookup_hit", {
+    code,
+    classroomId: data.id,
+  });
 
   return {
     id: data.id,
@@ -52,11 +66,18 @@ export async function enrollInClassroom(
   } = await supabase.auth.getUser();
 
   if (!user) {
+    log.warn("enroll_unauthenticated", { inviteCode });
     return { ok: false, error: "You must be signed in to join a classroom." };
   }
 
+  log.info("enroll_attempt", {
+    inviteCode,
+    userId: maskUserId(user.id),
+  });
+
   const classroom = await getClassroomByInviteCode(inviteCode);
   if (!classroom) {
+    log.warn("enroll_classroom_not_found", { inviteCode });
     return { ok: false, error: "Classroom not found. Check the invite link." };
   }
 
@@ -88,6 +109,10 @@ export async function enrollInClassroom(
     .maybeSingle();
 
   if (existing) {
+    log.info("enroll_already_member", {
+      classroomId: classroom.id,
+      userId: maskUserId(user.id),
+    });
     return {
       ok: true,
       classroomId: classroom.id,
@@ -104,10 +129,20 @@ export async function enrollInClassroom(
     });
 
   if (insertError) {
+    log.error("enroll_insert_failed", {
+      classroomId: classroom.id,
+      userId: maskUserId(user.id),
+      message: insertError.message,
+    });
     return { ok: false, error: insertError.message };
   }
 
   revalidatePath(routes.student.dashboard);
+
+  log.info("enroll_success", {
+    classroomId: classroom.id,
+    userId: maskUserId(user.id),
+  });
 
   return {
     ok: true,
@@ -128,8 +163,14 @@ export async function completeSkillAssessment(
   } = await supabase.auth.getUser();
 
   if (!user) {
+    log.warn("skills_unauthenticated");
     return { ok: false, error: "You must be signed in." };
   }
+
+  log.info("skills_submit", {
+    userId: maskUserId(user.id),
+    hasInviteCode: Boolean(inviteCode),
+  });
 
   const { error: ratingsError } = await supabase.from("skill_ratings").upsert(
     {
@@ -144,6 +185,10 @@ export async function completeSkillAssessment(
   );
 
   if (ratingsError) {
+    log.error("skills_ratings_failed", {
+      userId: maskUserId(user.id),
+      message: ratingsError.message,
+    });
     return { ok: false, error: ratingsError.message };
   }
 
@@ -153,6 +198,10 @@ export async function completeSkillAssessment(
     .eq("id", user.id);
 
   if (profileError) {
+    log.error("skills_profile_update_failed", {
+      userId: maskUserId(user.id),
+      message: profileError.message,
+    });
     return { ok: false, error: profileError.message };
   }
 
@@ -189,6 +238,7 @@ export async function processJoinInvite(
 
   const code = parseInviteCodeFromInput(rawInput);
   if (!code) {
+    log.warn("process_join_invalid_input");
     return { ok: false, error: "Enter a valid classroom code or invite link." };
   }
 
@@ -196,6 +246,13 @@ export async function processJoinInvite(
   const { user, profile } = await getSessionUser();
 
   const decision = decideInviteLanding(code, user, profile, !!classroom);
+
+  log.info("process_join_decision", {
+    code,
+    decision: decision.type,
+    authenticated: Boolean(user),
+    classroomFound: Boolean(classroom),
+  });
 
   switch (decision.type) {
     case "not_found":

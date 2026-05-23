@@ -12,6 +12,9 @@ import {
 } from "@/app/actions/join-classroom";
 import { ClassroomPreviewCard } from "@/components/join/classroom-preview-card";
 import { loginWithInvite, registerWithInvite } from "@/lib/auth/join-flow";
+import { createLogger } from "@/lib/logger";
+
+const log = createLogger("join:form");
 import { parseInviteCodeFromInput } from "@/lib/invite";
 
 const inputClass =
@@ -91,13 +94,16 @@ export function JoinClassroomForm({
     e.preventDefault();
 
     startTransition(async () => {
+      log.info("submit", { codeLength: code.length });
       const result = await processJoinInvite(code);
 
       if (!result.ok) {
+        log.warn("submit_failed", { error: result.error });
         toast.error(result.error);
         return;
       }
 
+      log.debug("submit_redirect", { redirectTo: result.redirectTo });
       router.push(result.redirectTo);
       router.refresh();
     });

@@ -6,7 +6,10 @@ import { createClient } from "@/lib/supabase/server";
 import { SKILL_DEFINITIONS } from "@/lib/constants/skills";
 import { buildJoinUrl, generateInviteCode } from "@/lib/invite";
 import { routes } from "@/lib/constants/routes";
+import { createLogger, maskUserId } from "@/lib/logger";
 import type { SkillKey, SkillRatings } from "@/types/database";
+
+const log = createLogger("classroom");
 
 const createClassroomSchema = z.object({
   name: z.string().min(1, "Class name is required"),
@@ -412,11 +415,15 @@ export async function createClassroom(
 ): Promise<CreateClassroomResult> {
   const parsed = createClassroomSchema.safeParse(input);
   if (!parsed.success) {
+    log.warn("create_validation_failed", {
+      issues: parsed.error.issues.map((i) => i.message),
+    });
     return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
   }
 
   const { name, subject, maxGroups, rules } = parsed.data;
   const inviteCode = generateInviteCode();
+  log.info("create_attempt", { name, maxGroups });
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const inviteUrl = buildJoinUrl(inviteCode, baseUrl);
 
@@ -427,6 +434,7 @@ export async function createClassroom(
     } = await supabase.auth.getUser();
 
     if (!user) {
+      log.warn("create_unauthenticated");
       return { success: false, error: "Sign in as an officer to create classrooms." };
     }
 
@@ -437,6 +445,10 @@ export async function createClassroom(
       .maybeSingle();
 
     if (profile?.role !== "officer") {
+      log.warn("create_forbidden_role", {
+        userId: maskUserId(user.id),
+        role: profile?.role,
+      });
       return {
         success: false,
         error: "Only officer accounts can create classrooms.",
@@ -457,6 +469,10 @@ export async function createClassroom(
       .single();
 
     if (error) {
+      log.error("create_insert_failed", {
+        userId: maskUserId(user.id),
+        message: error.message,
+      });
       return {
         success: false,
         error:
@@ -468,13 +484,22 @@ export async function createClassroom(
 
     revalidatePath(routes.officer.dashboard);
 
+    log.info("create_success", {
+      classroomId: data.id,
+      inviteCode,
+      userId: maskUserId(user.id),
+    });
+
     return {
       success: true,
       classroomId: data.id,
       inviteCode,
       inviteUrl,
     };
-  } catch {
+  } catch (err) {
+    log.error("create_exception", {
+      message: err instanceof Error ? err.message : "unknown",
+    });
     return {
       success: false,
       error: "Could not connect to Supabase. Check your environment variables.",

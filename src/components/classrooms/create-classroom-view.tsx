@@ -8,7 +8,10 @@ import { toast } from "sonner";
 import { createClassroom } from "@/app/actions/classrooms";
 import { ClassroomInviteQr } from "@/components/classrooms/classroom-invite-qr";
 import { routes } from "@/lib/constants/routes";
+import { createLogger } from "@/lib/logger";
 import { cn } from "@/lib/utils";
+
+const log = createLogger("classroom:ui");
 
 const SUBJECTS = [
   { value: "", label: "Select an academic discipline" },
@@ -58,6 +61,7 @@ export function CreateClassroomView() {
     }
 
     setIsSubmitting(true);
+    log.info("generate_invite_attempt", { name: name.trim() });
     const result = await createClassroom({
       name: name.trim(),
       subject: subject || undefined,
@@ -67,10 +71,14 @@ export function CreateClassroomView() {
     setIsSubmitting(false);
 
     if (!result.success) {
+      log.warn("generate_invite_failed", { error: result.error });
       toast.error(result.error);
       return;
     }
 
+    log.info("generate_invite_success", {
+      classroomId: result.classroomId,
+    });
     setInviteUrl(result.inviteUrl);
     setInviteCode(result.inviteCode);
     setClassroomId(result.classroomId);
