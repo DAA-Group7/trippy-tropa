@@ -1,3 +1,10 @@
 - implement and create documentation for Hungarian Algorithm for task assignment
 - implement and create documentation for Greedy Algorithm for task assignment (Greedy Balancing / Greedy Load Balancing Algorithm)
 - custom onboarding self assesment which officers can customized to add more skill metrics assesments (even add multiplier if desired for specific subject with specific desired skill)
+
+
+officer@trippy-tropa.dev
+Officer123!
+
+student@trippy-tropa.dev
+Student123!

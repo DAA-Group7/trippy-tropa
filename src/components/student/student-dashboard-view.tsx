@@ -4,14 +4,7 @@ import { useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  ArrowRight,
-  Clock,
-  Link2,
-  MoreHorizontal,
-  Plus,
-  Search,
-} from "lucide-react";
+import { ArrowRight, Clock, Link2, MoreHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import type { NotificationItem } from "@/app/actions/notifications";
 import type {
@@ -75,14 +68,6 @@ export function StudentDashboardView({
         </span>
         <BrandTitle className="text-lg md:hidden" />
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            className="rounded-full p-2 text-stitch-primary transition-colors hover:bg-stitch-accent-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stitch-primary"
-            aria-label="Search dashboard (coming soon)"
-            disabled
-          >
-            <Search className="size-5" aria-hidden />
-          </button>
           <div className="md:hidden">
             <SignOutButton variant="compact" />
           </div>
@@ -116,43 +101,18 @@ export function StudentDashboardView({
                 : `You have ${assignmentsDue} open assignment${assignmentsDue === 1 ? "" : "s"}.`}
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <a
-              href="#join-classroom"
-              className="inline-flex items-center gap-1 rounded-lg bg-[#2563eb] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#004ac6]"
-            >
-              <Link2 className="size-[18px]" />
-              Join classroom
-            </a>
-            <button
-              type="button"
-              onClick={() => toast.info("New task — coming soon")}
-              className="inline-flex items-center gap-1 rounded-lg bg-[#2563eb] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#004ac6]"
-            >
-              <Plus className="size-[18px]" />
-              New Task
-            </button>
-            <button
-              type="button"
-              onClick={() => toast.info("Schedule view — coming soon")}
-              className="rounded-lg border border-[#c3c6d7] bg-white px-4 py-2.5 text-sm font-medium text-[#505f76] shadow-sm transition-colors hover:bg-[#f3f3fe]"
-            >
-              View Schedule
-            </button>
-          </div>
+          <a
+            href="#join-classroom"
+            className="inline-flex items-center gap-1 rounded-lg bg-[#2563eb] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#004ac6]"
+          >
+            <Link2 className="size-[18px]" />
+            Join classroom
+          </a>
         </section>
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-12 md:gap-6">
           <div className="flex flex-col gap-4 md:col-span-8">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-[#191b23]">Active Tasks</h3>
-              <button
-                type="button"
-                className="text-xs font-semibold uppercase tracking-wide text-[#004ac6] hover:underline"
-              >
-                View All
-              </button>
-            </div>
+            <h3 className="text-lg font-semibold text-[#191b23]">Active Tasks</h3>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {activeTasks.length === 0 ? (
                 <p

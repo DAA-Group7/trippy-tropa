@@ -6,7 +6,7 @@
 - **Landmarks** — `<main id="main-content">` in both shells; mobile nav `aria-label`
 - **Group chat** — labeled composer (`sr-only` + `id`), `role="log"` + `aria-live="polite"` for new messages
 - **Officer search** — `aria-label` on dashboard search input
-- **Student dashboard** — disabled search control labeled as coming soon; profile image `alt` text
+- **Student dashboard** — profile image `alt` text; search/schedule stubs removed (GAP-F-010)
 - **Progress bar** — `role="progressbar"` with `aria-valuenow` on group workspace
 - **Officer profile** — sidebar uses session name/email instead of hardcoded “Dr. Smith”
 - **Focus** — primary buttons/inputs use `focus-visible:ring` via `stitch` token classes
