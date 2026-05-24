@@ -10,6 +10,7 @@ import {
   deleteTask,
   type OfficerTasksContext,
 } from "@/app/actions/tasks";
+import { AssignmentMatrixSection } from "@/components/officer/assignment-matrix";
 import { OfficerPageHeader } from "@/components/layout/officer-page-header";
 import {
   SKILL_KEYS,
@@ -377,6 +378,8 @@ export function OfficerTasksView({ context }: OfficerTasksViewProps) {
               )}
             </div>
 
+            <AssignmentMatrixSection matrices={context.assignmentMatrices} />
+
             <div
               className={cn(
                 "overflow-hidden rounded-xl border border-[#c3c6d7] bg-white",
@@ -385,7 +388,7 @@ export function OfficerTasksView({ context }: OfficerTasksViewProps) {
             >
               <div className="border-b border-[#c3c6d7] px-6 py-4">
                 <h2 className="text-lg font-semibold text-[#191b23]">
-                  Assignment optimization
+                  Assignment details
                 </h2>
                 <p className="text-sm text-[#434655]">
                   Uses each assignee&apos;s self-reported hours from the group matrix

@@ -13,6 +13,10 @@ import {
   type ClassroomEstimateStatus,
 } from "@/app/actions/time-estimates";
 import {
+  buildGroupAssignmentMatrices,
+  type GroupAssignmentMatrix,
+} from "@/lib/tasks/assignment-matrix-data";
+import {
   buildEstimateMap,
   getEstimateHours,
 } from "@/lib/tasks/estimate-matrix";
@@ -89,12 +93,15 @@ export type AssignmentRow = {
   reason: string;
 };
 
+export type { GroupAssignmentMatrix } from "@/lib/tasks/assignment-matrix-data";
+
 export type OfficerTasksContext = {
   classroomId: string;
   classroomName: string;
   groups: TaskGroupOption[];
   tasks: ClassroomTask[];
   assignmentRows: AssignmentRow[];
+  assignmentMatrices: GroupAssignmentMatrix[];
   estimateStatus: ClassroomEstimateStatus;
 };
 
@@ -241,6 +248,7 @@ export async function getOfficerTasksContext(
         groups: [],
         tasks: [],
         assignmentRows: [],
+        assignmentMatrices: [],
         estimateStatus: {
           filledCells: 0,
           totalCells: 0,
@@ -248,6 +256,42 @@ export async function getOfficerTasksContext(
           groupBreakdown: [],
         },
       };
+    }
+
+    const { data: memberRows } = await ctx.supabase
+      .from("group_members")
+      .select("group_id, user_id")
+      .in("group_id", groupIds);
+
+    const memberUserIds = [
+      ...new Set((memberRows ?? []).map((m) => m.user_id as string)),
+    ];
+
+    const { data: memberProfiles } = memberUserIds.length
+      ? await ctx.supabase
+          .from("profiles")
+          .select("id, email, full_name")
+          .in("id", memberUserIds)
+      : { data: [] };
+
+    const memberProfileById = new Map(
+      (memberProfiles ?? []).map((p) => [p.id, p])
+    );
+
+    const membersByGroup = new Map<string, { id: string; name: string }[]>();
+    for (const row of memberRows ?? []) {
+      const gid = row.group_id as string;
+      const uid = row.user_id as string;
+      const profile = memberProfileById.get(uid);
+      const name = profile
+        ? displayName(profile.full_name, profile.email)
+        : "Student";
+      const list = membersByGroup.get(gid) ?? [];
+      list.push({ id: uid, name });
+      membersByGroup.set(gid, list);
+    }
+    for (const [, list] of membersByGroup) {
+      list.sort((a, b) => a.name.localeCompare(b.name));
     }
 
     const estimateStatus = await getClassroomEstimateStatus(
@@ -307,12 +351,26 @@ export async function getOfficerTasksContext(
         reason: t.assignmentReason ?? "Manually assigned",
       }));
 
+    const assignmentMatrices = buildGroupAssignmentMatrices(
+      groupOptions,
+      membersByGroup,
+      (taskRows ?? []).map((t) => ({
+        id: t.id,
+        group_id: t.group_id,
+        title: t.title,
+        assigned_to: t.assigned_to,
+        assignment_match_score: t.assignment_match_score,
+      })),
+      estimateMap
+    );
+
     return {
       classroomId,
       classroomName: classroom?.name ?? "Classroom",
       groups: groupOptions,
       tasks,
       assignmentRows,
+      assignmentMatrices,
       estimateStatus,
     };
   } catch {
