@@ -27,6 +27,7 @@ import type {
   ClassroomDetailFull,
   ClassroomRosterStudent,
 } from "@/app/actions/classrooms";
+import { ClassroomAnalyticsCharts } from "@/components/officer/classroom-analytics-charts";
 import { OfficerPageHeader } from "@/components/layout/officer-page-header";
 import { routes } from "@/lib/constants/routes";
 import { cn } from "@/lib/utils";
@@ -213,7 +214,6 @@ export function ClassroomDetailView({
   };
 
   const codeTag = classroom.inviteCode.slice(0, 8).toUpperCase();
-  const hasSkillData = classroom.skillMetrics.some((s) => s.average > 0);
 
   return (
     <>
@@ -382,59 +382,9 @@ export function ClassroomDetailView({
               </div>
             </div>
 
-            <div className="lg:col-span-4">
-              <div
-                className={cn(
-                  "flex h-full flex-col rounded-xl border border-[#c3c6d7] bg-white p-6",
-                  cardShadow
-                )}
-              >
-                <div className="mb-4 flex items-center gap-2">
-                  <Radar className="size-5 text-[#004ac6]" />
-                  <h3 className="text-lg font-semibold text-[#191b23]">
-                    Collective Skills Matrix
-                  </h3>
-                </div>
-                <p className="mb-6 text-sm text-[#434655]">
-                  Average self-assessed proficiency across enrolled students who
-                  completed onboarding.
-                </p>
-                {hasSkillData ? (
-                  <div className="flex flex-1 flex-col justify-center gap-4">
-                    {classroom.skillMetrics.map((skill) => (
-                      <div key={skill.key}>
-                        <div className="mb-1 flex items-end justify-between">
-                          <span className="text-sm font-medium text-[#191b23]">
-                            {skill.label}
-                          </span>
-                          <span className="text-xs font-semibold text-[#505f76]">
-                            {skill.average > 0
-                              ? `${skill.average} / 5`
-                              : "—"}
-                          </span>
-                        </div>
-                        <div className="h-2 overflow-hidden rounded-full bg-[#e1e2ed]">
-                          <div
-                            className={cn(
-                              "h-full rounded-full transition-all",
-                              skill.barClass
-                            )}
-                            style={{ width: `${skill.percent}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="flex flex-1 items-center text-sm text-[#505f76]">
-                    No skill assessments yet. Students appear here after they
-                    complete onboarding.
-                  </p>
-                )}
-              </div>
-            </div>
+            <ClassroomAnalyticsCharts classroom={classroom} />
 
-            <div className="lg:col-span-8">
+            <div className="lg:col-span-12">
               <div
                 className={cn(
                   "flex h-full min-h-[480px] flex-col overflow-hidden rounded-xl border border-[#c3c6d7] bg-white",

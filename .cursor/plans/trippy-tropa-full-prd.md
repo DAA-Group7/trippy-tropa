@@ -94,7 +94,7 @@ Legend: **Status** = `missing` | `partial` | `stub`
 | GAP-F-007 | 4 Dashboard | Create classroom modal | full | [`create-classroom-sheet.tsx`](../../src/components/classrooms/create-classroom-sheet.tsx), [`create-classroom-form.tsx`](../../src/components/classrooms/create-classroom-form.tsx) | Sheet on dashboard with same fields as create page | Create without leaving dashboard |
 | GAP-F-008 | 4 Dashboard | Student join from dashboard | full | [`join-classroom-inline.tsx`](../../src/components/student/join-classroom-inline.tsx), [`student-dashboard-view.tsx`](../../src/components/student/student-dashboard-view.tsx) | Invite code field → enroll | Student joins new class from dashboard |
 | GAP-F-010 | 4 Dashboard | Student search / schedule | full | [`student-dashboard-view.tsx`](../../src/components/student/student-dashboard-view.tsx) | Search/schedule stubs removed until implemented | No misleading enabled controls |
-| GAP-F-011 | 5 Classroom detail | Interactive analytics charts | partial | [`classroom-detail-view.tsx`](../../src/components/officer/classroom-detail-view.tsx) — CSS bars | Recharts line/bar for skill distribution, enrollment trend | At least 2 chart types on detail page |
+| GAP-F-011 | 5 Classroom detail | Interactive analytics charts | full | [`classroom-analytics-charts.tsx`](../../src/components/officer/classroom-analytics-charts.tsx), [`classroom-analytics.ts`](../../src/lib/officer/classroom-analytics.ts) | Recharts bar (skills) + line (enrollment trend) | At least 2 chart types on detail page |
 | GAP-F-012 | 6 Workspace | Unified tabbed workspace | partial | Group hub + separate [`tasks/page`](../../src/app/student/classrooms/[id]/tasks/page.tsx) | Single route: **Board \| Members \| Chat \| Files** | No extra navigation to reach Kanban |
 | GAP-F-013 | 6 Workspace | File upload / shared files | missing | No Storage in `src/` | Upload, list, download per group; Supabase Storage + RLS | Member uploads PDF; peers can download |
 | GAP-F-014 | 7 Assignment | Student time estimate matrix | missing | Officer sets `estimated_hours` on task only | Table: rows = students, cols = tasks; each cell = hours estimate | All group members submit before “Generate” enabled |
@@ -248,10 +248,10 @@ flowchart LR
 | Member list | Searchable roster | Full | [`classroom-detail-view.tsx`](../../src/components/officer/classroom-detail-view.tsx) |
 | Group generation | Link + controls | Full | `routes.officer.generateGroups` |
 | Auto-group | Balancer + publish | Full | [`group-generation-view.tsx`](../../src/components/officer/group-generation-view.tsx) |
-| Analytics cards | Charts + KPIs | Partial — stat tiles, skill bars | GAP-F-011 |
+| Analytics cards | Charts + KPIs | Full — KPI tiles + Recharts bar/line | Same |
 | Invite sharing | Link + QR | Full | [`classroom-invite-qr.tsx`](../../src/components/classrooms/classroom-invite-qr.tsx) |
 
-**Gaps:** GAP-F-011
+**Gaps:** —
 
 ---
 
@@ -546,7 +546,7 @@ assignment_audit (
 - Participation dashboard: charts (Recharts), per-student table (GAP-F-018)
 - `classroom_skill_templates` + dynamic onboarding form (GAP-F-020)
 - Create classroom sheet — done (GAP-F-007)
-- Classroom detail charts (GAP-F-011)
+- Classroom detail charts — done (GAP-F-011)
 
 **Out of scope**
 
