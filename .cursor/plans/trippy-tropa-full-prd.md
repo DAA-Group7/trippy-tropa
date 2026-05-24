@@ -99,7 +99,7 @@ Legend: **Status** = `missing` | `partial` | `stub`
 | GAP-F-013 | 6 Workspace | File upload / shared files | **removed** | Out of scope — students use Google Drive / Docs externally | N/A | N/A |
 | GAP-F-014 | 7 Assignment | Student time estimate matrix | full | [`011_task_time_estimates.sql`](../../supabase/migrations/011_task_time_estimates.sql), [`time-estimates.ts`](../../src/app/actions/time-estimates.ts), [`group-workspace-estimates-panel.tsx`](../../src/components/student/group-workspace-estimates-panel.tsx) | Rows = members, cols = group tasks; each cell = self-reported hours; officer does not set task time | All group members submit before auto-assign enabled |
 | GAP-F-015 | 7 Assignment | Matrix / heatmap visualization | full | [`assignment-matrix.tsx`](../../src/components/officer/assignment-matrix.tsx), [`assignment-matrix-data.ts`](../../src/lib/tasks/assignment-matrix-data.ts) | Grid colored by assignee + match score | Officer sees student × task grid after optimize |
-| GAP-F-016 | 7 Assignment | Manual assignment override | missing | — | Reassign task to another student; optional reason; audit log | Override persists; student notification sent |
+| GAP-F-016 | 7 Assignment | Manual assignment override | full | [`012_assignment_audit.sql`](../../supabase/migrations/012_assignment_audit.sql), [`task-assignment-override-dialog.tsx`](../../src/components/officer/task-assignment-override-dialog.tsx), `overrideTaskAssignment` in [`tasks.ts`](../../src/app/actions/tasks.ts) | Reassign task to another student; optional reason; audit log | Override persists; student notification sent |
 | GAP-F-017 | 7 Assignment | Idempotent auto-assign | partial | [`task-assigner.ts`](../../src/lib/algorithms/task-assigner.ts) | Default: only unassigned tasks; `forceReassign` flag for officer | Re-run does not reshuffle unless forced |
 | GAP-F-018 | 8 Teacher | Participation metrics | missing | Dashboard stat cards only | Per-student: last active, tasks moved, messages sent, assessment status | Officer identifies at-risk students |
 | GAP-F-019 | 8 Teacher | Override assignments (classroom view) | missing | — | Bulk view of assignments with inline reassign | Same as GAP-F-016 at classroom scope |
@@ -283,9 +283,9 @@ flowchart LR
 | Generate button | Run optimizer | Full (greedy) | `autoAssignTasks` |
 | Results visualization | Matrix layout | Full — heatmap | GAP-F-015 |
 | Student view | Read assignments | Full | [`student-assignments-view.tsx`](../../src/components/student/student-assignments-view.tsx) |
-| Override | Manual reassign | Missing | GAP-F-016 |
+| Override | Manual reassign | Full | GAP-F-016 |
 
-**Gaps:** GAP-F-016–017, GAP-A-001–004
+**Gaps:** GAP-F-017, GAP-A-001–004
 
 ---
 
@@ -453,7 +453,7 @@ created_at timestamptz
 - Officer matrix / heatmap after assign — done (GAP-F-015)
 - Greedy docs: `docs/algorithms/greedy-assignment.md` (GAP-A-001)
 - Hungarian implementation + toggle in officer tasks (GAP-A-002, A-003)
-- Manual override + `assignment_audit` log (GAP-F-016, F-019)
+- Manual override + `assignment_audit` log — done (GAP-F-016); classroom bulk view (GAP-F-019)
 - Auto-assign: unassigned-only default (GAP-F-017)
 
 **Out of scope**
@@ -710,7 +710,8 @@ Use this appendix to avoid re-building shipped features.
 | GAP-F-013 | — (removed) |
 | GAP-F-014 | 3 (done) |
 | GAP-F-015 | 3 (done) |
-| GAP-F-016 – F-017, GAP-A-001 – A-004 | 3 |
+| GAP-F-016 | 3 (done) |
+| GAP-F-017, GAP-A-001 – A-004 | 3 |
 | GAP-F-007, F-011, F-018, F-019, F-020 | 4 |
 | GAP-F-023, GAP-P-001 – P-005 | 5 |
 

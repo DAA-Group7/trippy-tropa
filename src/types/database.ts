@@ -14,7 +14,18 @@ export type ClassroomActivityEventType =
   | "groups_published"
   | "task_created"
   | "task_deleted"
-  | "assignment_run";
+  | "assignment_run"
+  | "assignment_override";
+
+export interface AssignmentAudit {
+  id: string;
+  task_id: string;
+  from_student_id: string | null;
+  to_student_id: string;
+  changed_by: string;
+  reason: string | null;
+  created_at: string;
+}
 
 export type SkillKey =
   | "communication"

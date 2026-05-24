@@ -11,6 +11,7 @@ import {
   type OfficerTasksContext,
 } from "@/app/actions/tasks";
 import { AssignmentMatrixSection } from "@/components/officer/assignment-matrix";
+import { TaskAssignmentOverrideDialog } from "@/components/officer/task-assignment-override-dialog";
 import { OfficerPageHeader } from "@/components/layout/officer-page-header";
 import {
   SKILL_KEYS,
@@ -337,6 +338,7 @@ export function OfficerTasksView({ context }: OfficerTasksViewProps) {
                         <th className="px-4 py-3">Assignee</th>
                         <th className="px-4 py-3">Skills</th>
                         <th className="px-4 py-3">Status</th>
+                        <th className="px-4 py-3">Assign</th>
                         <th className="px-4 py-3" />
                       </tr>
                     </thead>
@@ -360,6 +362,22 @@ export function OfficerTasksView({ context }: OfficerTasksViewProps) {
                               {statusLabel(task.status)}
                             </span>
                           </td>
+                          <td className="px-4 py-3">
+                            <TaskAssignmentOverrideDialog
+                              classroomId={context.classroomId}
+                              taskId={task.id}
+                              taskTitle={task.title}
+                              groupId={task.groupId}
+                              currentAssigneeId={task.assignedTo}
+                              members={
+                                context.groupMembersByGroupId[task.groupId] ??
+                                []
+                              }
+                              triggerLabel={
+                                task.assignedTo ? "Reassign" : "Assign"
+                              }
+                            />
+                          </td>
                           <td className="px-4 py-3 text-right">
                             <button
                               type="button"
@@ -378,7 +396,11 @@ export function OfficerTasksView({ context }: OfficerTasksViewProps) {
               )}
             </div>
 
-            <AssignmentMatrixSection matrices={context.assignmentMatrices} />
+            <AssignmentMatrixSection
+              matrices={context.assignmentMatrices}
+              classroomId={context.classroomId}
+              groupMembersByGroupId={context.groupMembersByGroupId}
+            />
 
             <div
               className={cn(
@@ -409,6 +431,7 @@ export function OfficerTasksView({ context }: OfficerTasksViewProps) {
                         <th className="px-4 py-3">Member est.</th>
                         <th className="px-4 py-3">Match</th>
                         <th className="px-4 py-3">Rationale</th>
+                        <th className="px-4 py-3" />
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#c3c6d7]">
@@ -429,6 +452,19 @@ export function OfficerTasksView({ context }: OfficerTasksViewProps) {
                           </td>
                           <td className="px-4 py-3 text-xs text-[#505f76]">
                             {row.reason}
+                          </td>
+                          <td className="px-4 py-3">
+                            <TaskAssignmentOverrideDialog
+                              classroomId={context.classroomId}
+                              taskId={row.taskId}
+                              taskTitle={row.taskTitle}
+                              groupId={row.groupId}
+                              currentAssigneeId={row.studentId}
+                              members={
+                                context.groupMembersByGroupId[row.groupId] ??
+                                []
+                              }
+                            />
                           </td>
                         </tr>
                       ))}

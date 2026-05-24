@@ -10,7 +10,7 @@ export type GroupAssignmentMatrix = {
   groupId: string;
   groupName: string;
   members: { id: string; name: string; colorIndex: number }[];
-  tasks: { id: string; title: string }[];
+  tasks: { id: string; title: string; assigneeId: string | null }[];
   cells: Record<string, Record<string, AssignmentMatrixCell>>;
 };
 
@@ -64,7 +64,11 @@ export function buildGroupAssignmentMatrices(
       groupId: group.id,
       groupName: group.name,
       members,
-      tasks: groupTasks.map((t) => ({ id: t.id, title: t.title })),
+      tasks: groupTasks.map((t) => ({
+        id: t.id,
+        title: t.title,
+        assigneeId: t.assigned_to,
+      })),
       cells,
     };
   });

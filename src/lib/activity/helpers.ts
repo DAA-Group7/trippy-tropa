@@ -41,6 +41,12 @@ export function formatActivitySummary(
         ? `Auto-assigned ${count} task${count === 1 ? "" : "s"}`
         : "Ran task auto-assign";
     }
+    case "assignment_override": {
+      const title = (payload.taskTitle as string | undefined) ?? "a task";
+      const toName =
+        (payload.toStudentName as string | undefined) ?? "a student";
+      return `Reassigned “${title}” to ${toName}`;
+    }
     default:
       return "Classroom activity";
   }
@@ -57,6 +63,7 @@ export function iconForActivityType(
     case "groups_published":
       return "groups";
     case "assignment_run":
+    case "assignment_override":
       return "assign";
     case "task_created":
     case "task_deleted":

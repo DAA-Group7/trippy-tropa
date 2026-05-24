@@ -2,7 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { Grid3X3 } from "lucide-react";
+import type { GroupMemberOption } from "@/app/actions/tasks";
 import type { GroupAssignmentMatrix } from "@/lib/tasks/assignment-matrix-data";
+import { TaskAssignmentOverrideDialog } from "@/components/officer/task-assignment-override-dialog";
 import {
   assigneeColorForIndex,
   hexToRgba,
@@ -15,7 +17,16 @@ const cardShadow =
 
 interface AssignmentMatrixProps {
   matrices: GroupAssignmentMatrix[];
+  classroomId?: string;
+  groupMembersByGroupId?: Record<string, GroupMemberOption[]>;
 }
+
+type OverrideTarget = {
+  taskId: string;
+  taskTitle: string;
+  groupId: string;
+  currentAssigneeId: string | null;
+};
 
 function matrixHasAssignments(matrix: GroupAssignmentMatrix): boolean {
   return matrix.members.some((member) =>
@@ -23,7 +34,13 @@ function matrixHasAssignments(matrix: GroupAssignmentMatrix): boolean {
   );
 }
 
-function AssignmentHeatmap({ matrix }: { matrix: GroupAssignmentMatrix }) {
+function AssignmentHeatmap({
+  matrix,
+  onCellOverride,
+}: {
+  matrix: GroupAssignmentMatrix;
+  onCellOverride?: (target: OverrideTarget) => void;
+}) {
   const hasAssignments = matrixHasAssignments(matrix);
 
   return (
@@ -79,13 +96,22 @@ function AssignmentHeatmap({ matrix }: { matrix: GroupAssignmentMatrix }) {
                     const fill = matchScoreOpacity(matchScore);
                     return (
                       <td key={task.id} className="p-1">
-                        <div
-                          className="flex min-h-[52px] flex-col items-center justify-center rounded-lg border-2 px-1 py-1.5 text-center"
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onCellOverride?.({
+                              taskId: task.id,
+                              taskTitle: task.title,
+                              groupId: matrix.groupId,
+                              currentAssigneeId: task.assigneeId,
+                            })
+                          }
+                          className="flex min-h-[52px] w-full flex-col items-center justify-center rounded-lg border-2 px-1 py-1.5 text-center transition hover:ring-2 hover:ring-[#004ac6]/30"
                           style={{
                             backgroundColor: hexToRgba(color, fill),
                             borderColor: color,
                           }}
-                          title={`Assigned · ${matchScore}% skill match${estimatedHours != null ? ` · ${estimatedHours}h` : ""}`}
+                          title={`Assigned · click to reassign · ${matchScore}% skill match${estimatedHours != null ? ` · ${estimatedHours}h` : ""}`}
                         >
                           <span
                             className="text-xs font-bold"
@@ -98,7 +124,7 @@ function AssignmentHeatmap({ matrix }: { matrix: GroupAssignmentMatrix }) {
                               {estimatedHours}h
                             </span>
                           )}
-                        </div>
+                        </button>
                       </td>
                     );
                   }
@@ -106,15 +132,24 @@ function AssignmentHeatmap({ matrix }: { matrix: GroupAssignmentMatrix }) {
                   if (estimatedHours != null) {
                     return (
                       <td key={task.id} className="p-1">
-                        <div
-                          className="flex min-h-[52px] flex-col items-center justify-center rounded-lg border border-[#e7e7f3] bg-[#faf8ff] px-1 py-1.5 text-center"
-                          title={`Member estimate: ${estimatedHours}h`}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onCellOverride?.({
+                              taskId: task.id,
+                              taskTitle: task.title,
+                              groupId: matrix.groupId,
+                              currentAssigneeId: task.assigneeId,
+                            })
+                          }
+                          className="flex min-h-[52px] w-full flex-col items-center justify-center rounded-lg border border-[#e7e7f3] bg-[#faf8ff] px-1 py-1.5 text-center hover:border-[#004ac6]/40"
+                          title={`Member estimate: ${estimatedHours}h · click to assign`}
                         >
                           <span className="text-xs font-medium text-[#505f76]">
                             {estimatedHours}h
                           </span>
                           <span className="text-[10px] text-[#737686]">est.</span>
-                        </div>
+                        </button>
                       </td>
                     );
                   }
@@ -166,7 +201,11 @@ function AssignmentHeatmap({ matrix }: { matrix: GroupAssignmentMatrix }) {
   );
 }
 
-export function AssignmentMatrix({ matrices }: AssignmentMatrixProps) {
+export function AssignmentMatrix({
+  matrices,
+  classroomId,
+  groupMembersByGroupId,
+}: AssignmentMatrixProps) {
   const visible = useMemo(
     () =>
       matrices.filter(
@@ -182,7 +221,12 @@ export function AssignmentMatrix({ matrices }: AssignmentMatrixProps) {
   const activeMatrix =
     visible.find((m) => m.groupId === activeGroupId) ?? visible[0];
 
+  const [overrideTarget, setOverrideTarget] = useState<OverrideTarget | null>(
+    null
+  );
+
   const anyAssignments = visible.some(matrixHasAssignments);
+  const canOverride = Boolean(classroomId && groupMembersByGroupId);
 
   if (visible.length === 0) {
     return (
@@ -221,13 +265,46 @@ export function AssignmentMatrix({ matrices }: AssignmentMatrixProps) {
         </p>
       )}
 
-      {activeMatrix && <AssignmentHeatmap matrix={activeMatrix} />}
+      {canOverride && (
+        <p className="text-xs text-[#505f76]">
+          Click any cell to manually assign or reassign that task.
+        </p>
+      )}
+
+      {activeMatrix && (
+        <AssignmentHeatmap
+          matrix={activeMatrix}
+          onCellOverride={
+            canOverride ? (target) => setOverrideTarget(target) : undefined
+          }
+        />
+      )}
+
+      {overrideTarget && classroomId && groupMembersByGroupId && (
+        <TaskAssignmentOverrideDialog
+          classroomId={classroomId}
+          taskId={overrideTarget.taskId}
+          taskTitle={overrideTarget.taskTitle}
+          groupId={overrideTarget.groupId}
+          currentAssigneeId={overrideTarget.currentAssigneeId}
+          members={
+            groupMembersByGroupId[overrideTarget.groupId] ?? []
+          }
+          open
+          hideTrigger
+          onOpenChange={(next) => {
+            if (!next) setOverrideTarget(null);
+          }}
+        />
+      )}
     </div>
   );
 }
 
 export function AssignmentMatrixSection({
   matrices,
+  classroomId,
+  groupMembersByGroupId,
 }: AssignmentMatrixProps) {
   return (
     <div
@@ -249,7 +326,11 @@ export function AssignmentMatrixSection({
           </div>
         </div>
       </div>
-      <AssignmentMatrix matrices={matrices} />
+      <AssignmentMatrix
+        matrices={matrices}
+        classroomId={classroomId}
+        groupMembersByGroupId={groupMembersByGroupId}
+      />
     </div>
   );
 }

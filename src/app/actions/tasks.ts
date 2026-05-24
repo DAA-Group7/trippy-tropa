@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import {
   assignTasksOptimally,
+  computeTaskMatchScore,
   type StudentCapacity,
   type TaskToAssign,
 } from "@/lib/algorithms/task-assigner";
@@ -22,7 +23,9 @@ import {
 } from "@/lib/tasks/estimate-matrix";
 import {
   notifyTaskAssignmentsBulk,
+  notifyTaskReassigned,
   notifyTaskStatusUpdated,
+  notifyTaskUnassigned,
 } from "@/app/actions/notifications";
 import { recordClassroomActivity } from "@/lib/activity/record";
 import {
@@ -57,6 +60,15 @@ const updateTaskStatusSchema = z.object({
   status: z.enum(["todo", "in_progress", "review", "done"]),
 });
 
+const overrideTaskAssignmentSchema = z.object({
+  taskId: z.string().uuid(),
+  classroomId: z.string().uuid(),
+  newAssigneeId: z.string().uuid(),
+  reason: z.string().max(500).optional(),
+});
+
+export type GroupMemberOption = { id: string; name: string };
+
 type OfficerContext = {
   supabase: Awaited<ReturnType<typeof createClient>>;
   userId: string;
@@ -85,6 +97,7 @@ export type ClassroomTask = {
 export type AssignmentRow = {
   taskId: string;
   taskTitle: string;
+  groupId: string;
   groupName: string;
   studentId: string;
   studentName: string;
@@ -102,6 +115,7 @@ export type OfficerTasksContext = {
   tasks: ClassroomTask[];
   assignmentRows: AssignmentRow[];
   assignmentMatrices: GroupAssignmentMatrix[];
+  groupMembersByGroupId: Record<string, GroupMemberOption[]>;
   estimateStatus: ClassroomEstimateStatus;
 };
 
@@ -249,6 +263,7 @@ export async function getOfficerTasksContext(
         tasks: [],
         assignmentRows: [],
         assignmentMatrices: [],
+        groupMembersByGroupId: {},
         estimateStatus: {
           filledCells: 0,
           totalCells: 0,
@@ -337,11 +352,17 @@ export async function getOfficerTasksContext(
       )
     );
 
+    const groupMembersByGroupId: Record<string, GroupMemberOption[]> = {};
+    for (const [gid, list] of membersByGroup) {
+      groupMembersByGroupId[gid] = list;
+    }
+
     const assignmentRows: AssignmentRow[] = tasks
       .filter((t) => t.assignedTo && t.assigneeName)
       .map((t) => ({
         taskId: t.id,
         taskTitle: t.title,
+        groupId: t.groupId,
         groupName: t.groupName,
         studentId: t.assignedTo!,
         studentName: t.assigneeName!,
@@ -371,10 +392,165 @@ export async function getOfficerTasksContext(
       tasks,
       assignmentRows,
       assignmentMatrices,
+      groupMembersByGroupId,
       estimateStatus,
     };
   } catch {
     return null;
+  }
+}
+
+export async function overrideTaskAssignment(
+  input: z.infer<typeof overrideTaskAssignmentSchema>
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const parsed = overrideTaskAssignmentSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Invalid input",
+    };
+  }
+
+  try {
+    const ctx = await getOfficerContext();
+    if (!ctx || !(await assertOwnsClassroom(ctx, parsed.data.classroomId))) {
+      return { ok: false, error: "Access denied." };
+    }
+
+    const { data: task } = await ctx.supabase
+      .from("tasks")
+      .select(
+        "id, title, group_id, assigned_to, required_skills"
+      )
+      .eq("id", parsed.data.taskId)
+      .maybeSingle();
+
+    if (!task) return { ok: false, error: "Task not found." };
+
+    const { data: group } = await ctx.supabase
+      .from("groups")
+      .select("id, classroom_id")
+      .eq("id", task.group_id)
+      .maybeSingle();
+
+    if (!group || group.classroom_id !== parsed.data.classroomId) {
+      return { ok: false, error: "Task is not in this classroom." };
+    }
+
+    if (task.assigned_to === parsed.data.newAssigneeId) {
+      return { ok: false, error: "That member is already assigned." };
+    }
+
+    const { data: membership } = await ctx.supabase
+      .from("group_members")
+      .select("user_id")
+      .eq("group_id", task.group_id)
+      .eq("user_id", parsed.data.newAssigneeId)
+      .maybeSingle();
+
+    if (!membership) {
+      return {
+        ok: false,
+        error: "The selected student must be a member of this task's group.",
+      };
+    }
+
+    const { data: rating } = await ctx.supabase
+      .from("skill_ratings")
+      .select("communication, leadership, technical, teamwork")
+      .eq("user_id", parsed.data.newAssigneeId)
+      .maybeSingle();
+
+    if (!rating) {
+      return {
+        ok: false,
+        error: "The selected student has not completed skill ratings.",
+      };
+    }
+
+    const { data: assigneeProfile } = await ctx.supabase
+      .from("profiles")
+      .select("email, full_name")
+      .eq("id", parsed.data.newAssigneeId)
+      .maybeSingle();
+
+    const requiredSkills = parseRequiredSkills(task.required_skills);
+    const matchScore = computeTaskMatchScore(
+      rating as SkillRatings,
+      requiredSkills
+    );
+
+    const reasonTrimmed = parsed.data.reason?.trim() || null;
+    const assignmentReason = reasonTrimmed
+      ? `Manual override: ${reasonTrimmed}`
+      : "Manual override by instructor";
+
+    const { error: auditError } = await ctx.supabase
+      .from("assignment_audit")
+      .insert({
+        task_id: task.id,
+        from_student_id: task.assigned_to,
+        to_student_id: parsed.data.newAssigneeId,
+        changed_by: ctx.userId,
+        reason: reasonTrimmed,
+      });
+
+    if (auditError) {
+      return { ok: false, error: auditError.message };
+    }
+
+    const { error: updateError } = await ctx.supabase
+      .from("tasks")
+      .update({
+        assigned_to: parsed.data.newAssigneeId,
+        assignment_match_score: matchScore,
+        assignment_reason: assignmentReason,
+      })
+      .eq("id", task.id);
+
+    if (updateError) return { ok: false, error: updateError.message };
+
+    const toStudentName = assigneeProfile
+      ? displayName(assigneeProfile.full_name, assigneeProfile.email)
+      : "Student";
+
+    await recordClassroomActivity(ctx.supabase, {
+      classroomId: parsed.data.classroomId,
+      actorId: ctx.userId,
+      eventType: "assignment_override",
+      payload: {
+        taskId: task.id,
+        taskTitle: task.title,
+        fromStudentId: task.assigned_to,
+        toStudentId: parsed.data.newAssigneeId,
+        toStudentName,
+      },
+    });
+
+    await notifyTaskReassigned(
+      parsed.data.newAssigneeId,
+      task.title,
+      parsed.data.classroomId,
+      task.id,
+      reasonTrimmed
+    );
+
+    if (
+      task.assigned_to &&
+      task.assigned_to !== parsed.data.newAssigneeId
+    ) {
+      await notifyTaskUnassigned(
+        task.assigned_to,
+        task.title,
+        parsed.data.classroomId,
+        task.id
+      );
+    }
+
+    revalidateTaskPaths(parsed.data.classroomId);
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Could not override assignment." };
   }
 }
 

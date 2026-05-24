@@ -184,6 +184,46 @@ export async function notifyTaskAssigned(
   });
 }
 
+/** Notify student after instructor manual reassignment (GAP-F-016). */
+export async function notifyTaskReassigned(
+  userId: string,
+  taskTitle: string,
+  classroomId: string,
+  taskId: string,
+  reason?: string | null
+): Promise<void> {
+  const supabase = await createClient();
+  const trimmed = reason?.trim();
+  await insertNotification(supabase, {
+    userId,
+    title: `Task assigned: ${taskTitle}`,
+    body: trimmed
+      ? `Your instructor assigned this task to you. Note: ${trimmed}`
+      : "Your instructor assigned this task to you.",
+    kind: "task_assigned",
+    relatedId: taskId,
+    classroomId,
+  });
+}
+
+/** Notify previous assignee that the task was moved to someone else. */
+export async function notifyTaskUnassigned(
+  userId: string,
+  taskTitle: string,
+  classroomId: string,
+  taskId: string
+): Promise<void> {
+  const supabase = await createClient();
+  await insertNotification(supabase, {
+    userId,
+    title: `Task reassigned: ${taskTitle}`,
+    body: "This task was assigned to another group member by your instructor.",
+    kind: "task_updated",
+    relatedId: taskId,
+    classroomId,
+  });
+}
+
 export async function notifyTaskAssignmentsBulk(
   rows: {
     userId: string;
