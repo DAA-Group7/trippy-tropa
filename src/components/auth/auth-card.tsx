@@ -4,14 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { signUpStudent } from "@/app/actions/auth";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  Eye,
-  EyeOff,
-  GraduationCap,
-  Link2,
-  LogIn,
-  UserPlus,
-} from "lucide-react";
+import { Eye, EyeOff, Link2, LogIn, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { normalizeEmail, parseEmail } from "@/lib/auth/email";
 import {
@@ -217,10 +210,6 @@ export function AuthCard({
     });
   };
 
-  const handleSso = () => {
-    toast.info("University SSO will be available when auth is wired");
-  };
-
   return (
     <div
       className={cn(
@@ -391,23 +380,6 @@ export function AuthCard({
             )}
           </button>
         </form>
-
-        <div className="relative flex items-center py-6">
-          <div className="flex-grow border-t border-[#c3c6d7]" />
-          <span className="mx-4 shrink-0 text-xs font-semibold uppercase tracking-wide text-[#434655]">
-            Single Sign-On
-          </span>
-          <div className="flex-grow border-t border-[#c3c6d7]" />
-        </div>
-
-        <button
-          type="button"
-          onClick={handleSso}
-          className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#c3c6d7] bg-white px-4 py-2.5 text-sm font-medium text-[#505f76] transition-colors hover:bg-[#f3f3fe]"
-        >
-          <GraduationCap className="size-[18px] text-[#004ac6]" />
-          Continue with University Portal
-        </button>
       </div>
 
       <div className="border-t border-[#c3c6d7] bg-[#f3f3fe] p-4 text-center">

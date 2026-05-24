@@ -89,8 +89,7 @@ Legend: **Status** = `missing` | `partial` | `stub`
 | GAP-F-001 | 1 Landing | Hero + dual CTA above fold | full | [`src/app/page.tsx`](../../src/app/page.tsx) | Primary: **Join classroom** → `/join`; Secondary: **Create classroom** → `/officer/classrooms/new` | Both CTAs visible without scrolling on mobile |
 | GAP-F-002 | 1 Landing | Features section (3–4 pillars) | full | [`src/app/page.tsx`](../../src/app/page.tsx) | Dedicated features grid: group formation, task assignment, collaboration, progress | Icons + copy match PRD positioning |
 | GAP-F-003 | 2 Auth | Password reset | full | [`forgot-password-card.tsx`](../../src/components/auth/forgot-password-card.tsx), [`reset-password-card.tsx`](../../src/components/auth/reset-password-card.tsx), [`auth/callback/route.ts`](../../src/app/auth/callback/route.ts) | Supabase reset email flow | User receives reset link and can set new password |
-| GAP-F-004 | 2 Auth | SSO placeholder | stub | Auth card “University Portal” toast | Implement OIDC or remove until ready | No dead-end button in production |
-| GAP-F-005 | 2 Auth | Preserve invite `code` in middleware | partial | [`src/lib/supabase/middleware.ts`](../../src/lib/supabase/middleware.ts) | Redirects from `/login` keep `?code=` and `redirect` | Register from invite resumes join after auth |
+| GAP-F-005 | 2 Auth | Preserve invite `code` in middleware | full | [`login-redirect.ts`](../../src/lib/auth/login-redirect.ts), [`middleware.ts`](../../src/lib/supabase/middleware.ts) | Redirects to login keep `?code=` and `redirect` | Register from invite resumes join after auth |
 | GAP-F-006 | 4 Dashboard | Classroom activity feed | missing | [`officer-dashboard-view.tsx`](../../src/components/officer/officer-dashboard-view.tsx) | Chronological events: enroll, group publish, task changes, assign runs | Officer sees last 20 events per classroom or global |
 | GAP-F-007 | 4 Dashboard | Create classroom modal | missing | Full page [`/officer/classrooms/new`](../../src/app/officer/classrooms/new/page.tsx) | Sheet/Dialog on dashboard with same fields as create page | Create without leaving dashboard |
 | GAP-F-008 | 4 Dashboard | Student join from dashboard | partial | [`student-dashboard-view.tsx`](../../src/components/student/student-dashboard-view.tsx) | Invite code field → enroll | Student joins new class from dashboard |
@@ -144,7 +143,7 @@ Legend: **Status** = `missing` | `partial` | `stub`
 | Screen | Missing | Partial | Full |
 |--------|---------|---------|------|
 | 1 Landing | — | Screen 1 complete (GAP-F-001, F-002) | Page exists |
-| 2 Auth | SSO | Password reset done (GAP-F-003); invite banner | Login, register, invite join |
+| 2 Auth | — | Invite middleware + banner (GAP-F-003, F-005) | Login, register, invite join |
 | 3 Onboarding | Custom metrics per class | — | 3-step 1–5 assessment |
 | 4 Dashboard | Activity feed, create modal | Student avatar, search stub | Officer cards; student live data |
 | 5 Classroom detail | Charts | Skill bars, roster | Roster, invite, group links |
@@ -205,9 +204,8 @@ flowchart LR
 | Register | Full name, email, password | Full (server `signUpStudent`) | `/register` |
 | Accept invite | Context banner + code | Full | `?code=` on auth; [`/join/c/[code]`](../../src/app/join/c/[code]/page.tsx) |
 | Password reset | Email link | Full | `/forgot-password`, `/reset-password`, `/auth/callback` |
-| SSO | University portal | Stub | GAP-F-004 |
 
-**Gaps:** GAP-F-004, GAP-F-005
+**Gaps:** —
 
 ---
 
@@ -372,7 +370,7 @@ flowchart LR
 **In scope**
 
 - Landing: complete (GAP-F-001, F-002)
-- Middleware: preserve `code` / `redirect` on auth redirects (GAP-F-005)
+- Middleware invite params — done (GAP-F-005)
 - Student dashboard: join code input, real avatar/initials (GAP-F-008, F-009)
 - Remove or hide search/schedule stubs (GAP-F-010)
 - Mobile: wire Tasks and Notifications tabs (GAP-F-021, F-022)
@@ -601,7 +599,6 @@ classroom_skill_templates (
 - Dedupe notification subscriptions (GAP-P-001)
 - Middleware profile cache / JWT claims (performance)
 - Terms & Privacy pages (GAP-P-003)
-- Remove or implement SSO (GAP-F-004)
 - Officer mobile nav fixes (GAP-P-004)
 
 **Out of scope**
@@ -741,7 +738,7 @@ Use this appendix to avoid re-building shipped features.
 | GAP-F-012, F-013 | 2 |
 | GAP-F-014 – F-017, GAP-A-001 – A-004 | 3 |
 | GAP-F-007, F-011, F-018, F-019, F-020 | 4 |
-| GAP-F-003, F-004, F-023, GAP-P-001 – P-005 | 5 |
+| GAP-F-023, GAP-P-001 – P-005 | 5 |
 
 ---
 

@@ -1,6 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import {
+  extractInviteCodeFromRequestUrl,
+  buildLoginRedirectUrl,
+} from "@/lib/auth/login-redirect";
+import {
   canAccessPath,
   isAuthPath,
   isOnboardingPath,
@@ -81,13 +85,36 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   };
 
+  const redirectToLogin = () => {
+    const url = buildLoginRedirectUrl(request.nextUrl);
+    log.debug("redirect_to_login", {
+      from: pathname,
+      hasCode: url.searchParams.has("code"),
+      redirect: url.searchParams.get("redirect"),
+    });
+    return NextResponse.redirect(url);
+  };
+
+  const redirectToOnboarding = () => {
+    const url = request.nextUrl.clone();
+    url.pathname = routes.onboarding;
+    url.search = "";
+    const code = extractInviteCodeFromRequestUrl(request.nextUrl);
+    if (code) url.searchParams.set("code", code);
+    const returnPath = request.nextUrl.searchParams.get("redirect");
+    if (
+      returnPath?.startsWith("/") &&
+      !returnPath.startsWith("//")
+    ) {
+      url.searchParams.set("redirect", returnPath);
+    }
+    return NextResponse.redirect(url);
+  };
+
   // Unauthenticated users cannot access protected areas
   if (!user && requiresAuth(pathname)) {
     log.debug("redirect_unauthenticated", { path: pathname });
-    const url = request.nextUrl.clone();
-    url.pathname = routes.login;
-    url.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(url);
+    return redirectToLogin();
   }
 
   // Authenticated but missing profile — send to login
@@ -96,7 +123,7 @@ export async function updateSession(request: NextRequest) {
       path: pathname,
       userId: maskUserId(user.id),
     });
-    return redirectTo(routes.login);
+    return redirectToLogin();
   }
 
   if (user && profile) {
@@ -124,15 +151,7 @@ export async function updateSession(request: NextRequest) {
       !profile.skills_completed &&
       isStudentPath(pathname)
     ) {
-      const url = request.nextUrl.clone();
-      url.pathname = routes.onboarding;
-      if (request.nextUrl.searchParams.has("code")) {
-        url.searchParams.set(
-          "code",
-          request.nextUrl.searchParams.get("code")!
-        );
-      }
-      return NextResponse.redirect(url);
+      return redirectToOnboarding();
     }
 
     // Students who completed skills should not revisit onboarding
