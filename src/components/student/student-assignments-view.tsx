@@ -67,7 +67,9 @@ export function StudentAssignmentsView({ data }: StudentAssignmentsViewProps) {
                   {a.taskTitle}
                 </h2>
                 <span className="rounded-full bg-[#dbe1ff] px-2.5 py-0.5 text-xs font-semibold text-[#004ac6]">
-                  {a.estimatedHours}h estimated
+                  {a.estimatedHours > 0
+                    ? `${a.estimatedHours}h member est.`
+                    : "No estimate"}
                 </span>
               </div>
               <p className="mt-1 text-sm text-[#434655]">

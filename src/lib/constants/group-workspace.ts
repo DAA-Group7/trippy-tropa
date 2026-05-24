@@ -4,7 +4,7 @@ export const GROUP_WORKSPACE_TABS = [
   "board",
   "members",
   "chat",
-  "files",
+  "estimates",
 ] as const;
 
 export type GroupWorkspaceTab = (typeof GROUP_WORKSPACE_TABS)[number];
@@ -16,7 +16,7 @@ export function parseGroupWorkspaceTab(
     raw === "board" ||
     raw === "members" ||
     raw === "chat" ||
-    raw === "files"
+    raw === "estimates"
   ) {
     return raw;
   }

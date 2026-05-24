@@ -8,6 +8,15 @@ import {
   type TaskToAssign,
 } from "@/lib/algorithms/task-assigner";
 import {
+  getClassroomEstimateStatus,
+  loadEstimatesForGroups,
+  type ClassroomEstimateStatus,
+} from "@/app/actions/time-estimates";
+import {
+  buildEstimateMap,
+  getEstimateHours,
+} from "@/lib/tasks/estimate-matrix";
+import {
   notifyTaskAssignmentsBulk,
   notifyTaskStatusUpdated,
 } from "@/app/actions/notifications";
@@ -35,7 +44,6 @@ const createTaskSchema = z.object({
   groupId: z.string().uuid(),
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
-  estimatedHours: z.coerce.number().positive("Hours must be positive"),
   deadline: z.string().optional(),
   requiredSkills: requiredSkillsSchema,
 });
@@ -65,7 +73,6 @@ export type ClassroomTask = {
   assignedTo: string | null;
   assigneeName: string | null;
   deadline: string | null;
-  estimatedHours: number;
   requiredSkills: Partial<SkillRatings>;
   assignmentMatchScore: number | null;
   assignmentReason: string | null;
@@ -88,6 +95,7 @@ export type OfficerTasksContext = {
   groups: TaskGroupOption[];
   tasks: ClassroomTask[];
   assignmentRows: AssignmentRow[];
+  estimateStatus: ClassroomEstimateStatus;
 };
 
 export type KanbanTaskData = {
@@ -96,7 +104,8 @@ export type KanbanTaskData = {
   assignee: string;
   assigneeId: string | null;
   deadline: string;
-  estimatedHours: number;
+  /** Current user's hours estimate for this task */
+  myEstimateHours: number | null;
   status: TaskStatus;
   canDrag: boolean;
 };
@@ -194,7 +203,6 @@ function mapTaskRow(
       ? displayName(profile.full_name, profile.email)
       : null,
     deadline: task.deadline,
-    estimatedHours: Number(task.estimated_hours ?? 0),
     requiredSkills: parseRequiredSkills(task.required_skills),
     assignmentMatchScore: task.assignment_match_score,
     assignmentReason: task.assignment_reason,
@@ -233,8 +241,20 @@ export async function getOfficerTasksContext(
         groups: [],
         tasks: [],
         assignmentRows: [],
+        estimateStatus: {
+          filledCells: 0,
+          totalCells: 0,
+          isComplete: true,
+          groupBreakdown: [],
+        },
       };
     }
+
+    const estimateStatus = await getClassroomEstimateStatus(
+      ctx.supabase,
+      classroomId
+    );
+    const estimateMap = await loadEstimatesForGroups(ctx.supabase, groupIds);
 
     const groupNameById = new Map(groupOptions.map((g) => [g.id, g.name]));
 
@@ -281,7 +301,8 @@ export async function getOfficerTasksContext(
         groupName: t.groupName,
         studentId: t.assignedTo!,
         studentName: t.assigneeName!,
-        estimatedHours: t.estimatedHours,
+        estimatedHours:
+          getEstimateHours(estimateMap, t.assignedTo!, t.id) ?? 0,
         matchScore: t.assignmentMatchScore ?? 0,
         reason: t.assignmentReason ?? "Manually assigned",
       }));
@@ -292,6 +313,7 @@ export async function getOfficerTasksContext(
       groups: groupOptions,
       tasks,
       assignmentRows,
+      estimateStatus,
     };
   } catch {
     return null;
@@ -334,7 +356,7 @@ export async function createTask(
         group_id: parsed.data.groupId,
         title: parsed.data.title,
         description: parsed.data.description || null,
-        estimated_hours: parsed.data.estimatedHours,
+        estimated_hours: null,
         deadline: parsed.data.deadline
           ? new Date(parsed.data.deadline).toISOString()
           : null,
@@ -420,6 +442,24 @@ export async function autoAssignTasks(
       return { ok: false, error: "Create groups before assigning tasks." };
     }
 
+    const estimateStatus = await getClassroomEstimateStatus(
+      ctx.supabase,
+      classroomId
+    );
+
+    if (estimateStatus.totalCells > 0 && !estimateStatus.isComplete) {
+      return {
+        ok: false,
+        error: `All group members must complete the time estimate matrix before auto-assign (${estimateStatus.filledCells}/${estimateStatus.totalCells} cells filled).`,
+      };
+    }
+
+    const groupIds = groups.map((g) => g.id);
+    const classroomEstimateMap = await loadEstimatesForGroups(
+      ctx.supabase,
+      groupIds
+    );
+
     let assignedCount = 0;
     const notifyRows: {
       userId: string;
@@ -472,21 +512,23 @@ export async function autoAssignTasks(
 
       const { data: taskRows } = await ctx.supabase
         .from("tasks")
-        .select(
-          "id, title, estimated_hours, required_skills, assigned_to"
-        )
+        .select("id, title, required_skills, assigned_to")
         .eq("group_id", group.id);
 
       const toAssign: TaskToAssign[] = (taskRows ?? []).map((t) => ({
         id: t.id,
         title: t.title,
         requiredSkills: parseRequiredSkills(t.required_skills),
-        estimatedHours: Number(t.estimated_hours ?? 1),
       }));
 
       if (toAssign.length === 0) continue;
 
-      const assignments = assignTasksOptimally(toAssign, students);
+      const assignments = assignTasksOptimally(
+        toAssign,
+        students,
+        (studentId, taskId) =>
+          getEstimateHours(classroomEstimateMap, studentId, taskId)
+      );
 
       const taskById = new Map((taskRows ?? []).map((t) => [t.id, t]));
 
@@ -702,11 +744,25 @@ export async function getStudentKanbanTasks(
 
     const { data: taskRows } = await supabase
       .from("tasks")
-      .select(
-        "id, title, status, assigned_to, deadline, estimated_hours"
-      )
+      .select("id, title, status, assigned_to, deadline")
       .eq("group_id", group.id)
       .order("created_at", { ascending: true });
+
+    const taskIds = (taskRows ?? []).map((t) => t.id);
+    const { data: myEstimateRows } = taskIds.length
+      ? await supabase
+          .from("task_time_estimates")
+          .select("task_id, user_id, estimated_hours")
+          .in("task_id", taskIds)
+          .eq("user_id", user.id)
+      : { data: [] };
+
+    const myEstimateByTask = new Map(
+      (myEstimateRows ?? []).map((e) => [
+        e.task_id,
+        Number(e.estimated_hours),
+      ])
+    );
 
     const assigneeIds = [
       ...new Set(
@@ -744,7 +800,7 @@ export async function getStudentKanbanTasks(
               day: "numeric",
             })
           : "No deadline",
-        estimatedHours: Number(t.estimated_hours ?? 0),
+        myEstimateHours: myEstimateByTask.get(t.id) ?? null,
         status: t.status as TaskStatus,
         canDrag: t.assigned_to === user.id,
       };
@@ -824,11 +880,21 @@ export async function getStudentAssignmentResults(
     const { data: taskRows } = await supabase
       .from("tasks")
       .select(
-        "id, title, assigned_to, estimated_hours, required_skills, assignment_match_score, assignment_reason"
+        "id, title, assigned_to, required_skills, assignment_match_score, assignment_reason"
       )
       .eq("group_id", myMembership.group_id)
       .not("assigned_to", "is", null)
       .order("created_at", { ascending: true });
+
+    const taskIds = (taskRows ?? []).map((t) => t.id);
+    const { data: estimateRows } = taskIds.length
+      ? await supabase
+          .from("task_time_estimates")
+          .select("task_id, user_id, estimated_hours")
+          .in("task_id", taskIds)
+      : { data: [] };
+
+    const estimateMap = buildEstimateMap(estimateRows ?? []);
 
     const assigneeIds = [
       ...new Set((taskRows ?? []).map((t) => t.assigned_to as string)),
@@ -852,7 +918,12 @@ export async function getStudentAssignmentResults(
         taskTitle: t.title,
         assigneeName: name,
         isCurrentUser: t.assigned_to === user.id,
-        estimatedHours: Number(t.estimated_hours ?? 0),
+        estimatedHours:
+          getEstimateHours(
+            estimateMap,
+            t.assigned_to as string,
+            t.id
+          ) ?? 0,
         requiredSkillsLabel: formatRequiredSkills(
           parseRequiredSkills(t.required_skills)
         ),

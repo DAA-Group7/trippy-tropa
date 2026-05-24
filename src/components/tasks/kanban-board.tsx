@@ -71,7 +71,9 @@ function KanbanCardContent({
           </p>
           <p className="text-xs text-[#505f76]">Due: {task.deadline}</p>
           <span className="mt-2 inline-block rounded-full bg-[#e7e7f3] px-2 py-0.5 text-xs font-medium text-[#434655]">
-            {task.estimatedHours}h est.
+            {task.myEstimateHours != null
+              ? `${task.myEstimateHours}h your est.`
+              : "Add time estimate"}
           </span>
           {!task.canDrag && (
             <p className="mt-1 text-[10px] text-[#737686]">View only</p>

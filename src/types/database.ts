@@ -64,8 +64,16 @@ export interface Task {
   status: TaskStatus;
   assigned_to: string | null;
   deadline: string | null;
+  /** Legacy officer field; assignment uses task_time_estimates */
   estimated_hours: number | null;
   required_skills?: Partial<SkillRatings>;
   assignment_match_score?: number | null;
   assignment_reason?: string | null;
+}
+
+export interface TaskTimeEstimate {
+  task_id: string;
+  user_id: string;
+  estimated_hours: number;
+  updated_at: string;
 }

@@ -37,7 +37,6 @@ export function OfficerTasksView({ context }: OfficerTasksViewProps) {
   const [groupId, setGroupId] = useState(context.groups[0]?.id ?? "");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [estimatedHours, setEstimatedHours] = useState("4");
   const [deadline, setDeadline] = useState("");
   const [primarySkill, setPrimarySkill] = useState<SkillKey>("technical");
   const [skillWeight, setSkillWeight] = useState("4");
@@ -57,7 +56,6 @@ export function OfficerTasksView({ context }: OfficerTasksViewProps) {
         groupId,
         title: title.trim(),
         description: description.trim() || undefined,
-        estimatedHours: Number(estimatedHours),
         deadline: deadline || undefined,
         requiredSkills: {
           [primarySkill]: Number(skillWeight),
@@ -122,14 +120,26 @@ export function OfficerTasksView({ context }: OfficerTasksViewProps) {
               Task management
             </h1>
             <p className="mt-1 text-sm text-[#434655]">
-              Create tasks per group and run skill + time-based auto assignment.
+              Create project tasks per group. Students fill a time estimate matrix;
+              auto-assign uses their self-reported hours.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={handleAutoAssign}
-              disabled={isPending || context.groups.length === 0}
+              disabled={
+                isPending ||
+                context.groups.length === 0 ||
+                (context.estimateStatus.totalCells > 0 &&
+                  !context.estimateStatus.isComplete)
+              }
+              title={
+                context.estimateStatus.totalCells > 0 &&
+                !context.estimateStatus.isComplete
+                  ? "Waiting for all group members to complete time estimates"
+                  : undefined
+              }
               className="inline-flex items-center gap-2 rounded-lg border border-[#c3c6d7] bg-white px-4 py-2.5 text-sm font-medium text-[#505f76] hover:bg-[#f3f3fe] disabled:opacity-60"
             >
               <Wand2 className="size-4" />
@@ -167,6 +177,29 @@ export function OfficerTasksView({ context }: OfficerTasksViewProps) {
           </div>
         ) : (
           <>
+            {context.estimateStatus.totalCells > 0 && (
+              <div
+                className={cn(
+                  "rounded-xl border px-4 py-3 text-sm",
+                  context.estimateStatus.isComplete
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+                    : "border-amber-200 bg-amber-50 text-amber-950"
+                )}
+              >
+                <p className="font-medium">
+                  Time estimate matrix:{" "}
+                  {context.estimateStatus.filledCells}/
+                  {context.estimateStatus.totalCells} cells complete
+                </p>
+                {!context.estimateStatus.isComplete && (
+                  <p className="mt-1 text-xs opacity-90">
+                    Each group member must enter hours for every task in their
+                    group before auto-assign runs.
+                  </p>
+                )}
+              </div>
+            )}
+
             {showForm && (
               <div
                 className={cn(
@@ -215,20 +248,7 @@ export function OfficerTasksView({ context }: OfficerTasksViewProps) {
                       onChange={(e) => setDescription(e.target.value)}
                     />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-[#434655]">
-                      Est. hours
-                    </label>
-                    <input
-                      type="number"
-                      min={0.5}
-                      step={0.5}
-                      className={inputClass}
-                      value={estimatedHours}
-                      onChange={(e) => setEstimatedHours(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-1">
+                  <div className="space-y-1 sm:col-span-2">
                     <label className="text-sm font-medium text-[#434655]">
                       Deadline (optional)
                     </label>
@@ -314,7 +334,6 @@ export function OfficerTasksView({ context }: OfficerTasksViewProps) {
                         <th className="px-4 py-3">Task</th>
                         <th className="px-4 py-3">Group</th>
                         <th className="px-4 py-3">Assignee</th>
-                        <th className="px-4 py-3">Hours</th>
                         <th className="px-4 py-3">Skills</th>
                         <th className="px-4 py-3">Status</th>
                         <th className="px-4 py-3" />
@@ -332,7 +351,6 @@ export function OfficerTasksView({ context }: OfficerTasksViewProps) {
                           <td className="px-4 py-3 text-[#434655]">
                             {task.assigneeName ?? "—"}
                           </td>
-                          <td className="px-4 py-3">{task.estimatedHours}h</td>
                           <td className="px-4 py-3 text-xs text-[#505f76]">
                             {formatRequiredSkills(task.requiredSkills)}
                           </td>
@@ -370,7 +388,7 @@ export function OfficerTasksView({ context }: OfficerTasksViewProps) {
                   Assignment optimization
                 </h2>
                 <p className="text-sm text-[#434655]">
-                  Students × tasks × estimated completion time
+                  Uses each assignee&apos;s self-reported hours from the group matrix
                 </p>
               </div>
               {context.assignmentRows.length === 0 ? (
@@ -385,7 +403,7 @@ export function OfficerTasksView({ context }: OfficerTasksViewProps) {
                         <th className="px-4 py-3">Student</th>
                         <th className="px-4 py-3">Task</th>
                         <th className="px-4 py-3">Group</th>
-                        <th className="px-4 py-3">Est. hours</th>
+                        <th className="px-4 py-3">Member est.</th>
                         <th className="px-4 py-3">Match</th>
                         <th className="px-4 py-3">Rationale</th>
                       </tr>

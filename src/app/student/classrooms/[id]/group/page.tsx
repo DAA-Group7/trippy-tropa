@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
 import { getStudentGroupWorkspace } from "@/app/actions/groups";
 import { getGroupMessages } from "@/app/actions/messages";
+import { getGroupTimeEstimatesMatrix } from "@/app/actions/time-estimates";
 import { getStudentKanbanTasks } from "@/app/actions/tasks";
 import { getSessionUser } from "@/lib/auth/session";
 import { routes } from "@/lib/constants/routes";
@@ -30,9 +31,12 @@ async function GroupWorkspaceContent({
     notFound();
   }
 
-  const [initialMessages, kanban] = await Promise.all([
+  const [initialMessages, kanban, estimatesMatrix] = await Promise.all([
     data.group ? getGroupMessages(data.group.id) : Promise.resolve([]),
     data.group ? getStudentKanbanTasks(classroomId) : Promise.resolve(null),
+    data.group
+      ? getGroupTimeEstimatesMatrix(data.group.id)
+      : Promise.resolve(null),
   ]);
 
   return (
@@ -40,6 +44,7 @@ async function GroupWorkspaceContent({
       data={data}
       initialMessages={initialMessages}
       kanbanTasks={kanban?.tasks ?? []}
+      estimatesMatrix={estimatesMatrix}
     />
   );
 }

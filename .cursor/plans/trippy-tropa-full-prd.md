@@ -95,9 +95,9 @@ Legend: **Status** = `missing` | `partial` | `stub`
 | GAP-F-008 | 4 Dashboard | Student join from dashboard | full | [`join-classroom-inline.tsx`](../../src/components/student/join-classroom-inline.tsx), [`student-dashboard-view.tsx`](../../src/components/student/student-dashboard-view.tsx) | Invite code field → enroll | Student joins new class from dashboard |
 | GAP-F-010 | 4 Dashboard | Student search / schedule | full | [`student-dashboard-view.tsx`](../../src/components/student/student-dashboard-view.tsx) | Search/schedule stubs removed until implemented | No misleading enabled controls |
 | GAP-F-011 | 5 Classroom detail | Interactive analytics charts | full | [`classroom-analytics-charts.tsx`](../../src/components/officer/classroom-analytics-charts.tsx), [`classroom-analytics.ts`](../../src/lib/officer/classroom-analytics.ts) | Recharts bar (skills) + line (enrollment trend) | At least 2 chart types on detail page |
-| GAP-F-012 | 6 Workspace | Unified tabbed workspace | full | [`student-group-workspace-view.tsx`](../../src/components/student/student-group-workspace-view.tsx), [`group-workspace.ts`](../../src/lib/constants/group-workspace.ts) | Single route: **Board \| Members \| Chat \| Files** | No extra navigation to reach Kanban |
-| GAP-F-013 | 6 Workspace | File upload / shared files | missing | No Storage in `src/` | Upload, list, download per group; Supabase Storage + RLS | Member uploads PDF; peers can download |
-| GAP-F-014 | 7 Assignment | Student time estimate matrix | missing | Officer sets `estimated_hours` on task only | Table: rows = students, cols = tasks; each cell = hours estimate | All group members submit before “Generate” enabled |
+| GAP-F-012 | 6 Workspace | Unified tabbed workspace | full | [`student-group-workspace-view.tsx`](../../src/components/student/student-group-workspace-view.tsx), [`group-workspace.ts`](../../src/lib/constants/group-workspace.ts) | Single route: **Board \| Members \| Chat \| Time estimates** | No extra navigation to reach Kanban |
+| GAP-F-013 | 6 Workspace | File upload / shared files | **removed** | Out of scope — students use Google Drive / Docs externally | N/A | N/A |
+| GAP-F-014 | 7 Assignment | Student time estimate matrix | full | [`011_task_time_estimates.sql`](../../supabase/migrations/011_task_time_estimates.sql), [`time-estimates.ts`](../../src/app/actions/time-estimates.ts), [`group-workspace-estimates-panel.tsx`](../../src/components/student/group-workspace-estimates-panel.tsx) | Rows = members, cols = group tasks; each cell = self-reported hours; officer does not set task time | All group members submit before auto-assign enabled |
 | GAP-F-015 | 7 Assignment | Matrix / heatmap visualization | missing | [`officer-tasks-view.tsx`](../../src/components/officer/officer-tasks-view.tsx) table only | Grid colored by assignee + match score | Officer sees student × task grid after optimize |
 | GAP-F-016 | 7 Assignment | Manual assignment override | missing | — | Reassign task to another student; optional reason; audit log | Override persists; student notification sent |
 | GAP-F-017 | 7 Assignment | Idempotent auto-assign | partial | [`task-assigner.ts`](../../src/lib/algorithms/task-assigner.ts) | Default: only unassigned tasks; `forceReassign` flag for officer | Re-run does not reshuffle unless forced |
@@ -108,7 +108,7 @@ Legend: **Status** = `missing` | `partial` | `stub`
 | GAP-F-022 | 9 Mobile | Notifications tab routing | partial | Hash `#updates` on dashboard only | Dedicated `/student/notifications` or scroll to feed | Tab opens notification list |
 | GAP-F-023 | 9 Mobile | Responsive Kanban | partial | [`kanban-board.tsx`](../../src/components/tasks/kanban-board.tsx) | Horizontal scroll columns on `sm`; touch DnD | Usable on 375px width |
 
-**Dependencies:** P1 items depend on Phase 0 for RLS; file upload depends on Storage bucket setup.
+**Dependencies:** P1 items depend on Phase 0 for RLS. In-app file upload (F-013) is out of scope.
 
 ---
 
@@ -146,7 +146,7 @@ Legend: **Status** = `missing` | `partial` | `stub`
 | 3 Onboarding | Custom metrics per class | — | 3-step 1–5 assessment |
 | 4 Dashboard | — | Officer + student dashboard P1 gaps (F-006–F-008, F-010) | Officer cards; student live data |
 | 5 Classroom detail | Charts | Skill bars, roster | Roster, invite, group links |
-| 6 Workspace | Files upload | Unified tabs (F-012); board, members, chat | Progress card |
+| 6 Workspace | Time estimates tab | Unified tabs (F-012); board, members, chat, estimates | Progress card |
 | 7 Assignment | Estimates matrix, heatmap, override | Greedy assign, results table | Task CRUD, auto-assign |
 | 8 Teacher dashboard | Participation, override UI | Aggregate stats | Classroom grid |
 | 9 Mobile | Tab routing | Kanban responsive | Bottom nav shells |
@@ -163,8 +163,8 @@ flowchart LR
     MobileNav[Mobile nav]
   end
   subgraph p2 [Phase 2]
-    Files[Group files]
     Workspace[Unified workspace]
+    Estimates[Time estimate matrix]
   end
   subgraph p3 [Phase 3]
     Matrix[Assignment matrix]
@@ -264,11 +264,11 @@ flowchart LR
 | Kanban | 4 columns, DnD | Full — Board tab | [`kanban-board.tsx`](../../src/components/tasks/kanban-board.tsx), group `?tab=board` |
 | Members | Leader highlight | Full — Members tab | [`group-workspace-members-panel.tsx`](../../src/components/student/group-workspace-members-panel.tsx) |
 | Chat | Realtime messages | Full — Chat tab | [`group-chat-panel.tsx`](../../src/components/chat/group-chat-panel.tsx) |
-| File upload | Shared files | Missing | GAP-F-013 |
+| External files | Google Drive / Docs (not in-app) | N/A | GAP-F-013 removed |
 | Progress card | % complete | Full | Group workspace progress bar |
-| Unified layout | Single screen tabs | Full | Board · Members · Chat · Files |
+| Unified layout | Single screen tabs | Full | Board · Members · Chat · Time estimates |
 
-**Gaps:** GAP-F-013
+**Gaps:** None (F-013 removed from scope)
 
 ---
 
@@ -279,13 +279,13 @@ flowchart LR
 | Component | Target | Current | Route / component |
 |-----------|--------|---------|-------------------|
 | Task table (officer) | CRUD | Full | [`officer-tasks-view.tsx`](../../src/components/officer/officer-tasks-view.tsx) |
-| Time estimates (students) | Matrix input | Missing | GAP-F-014 |
+| Time estimates (students) | Matrix input | Full — Estimates tab | GAP-F-014 |
 | Generate button | Run optimizer | Full (greedy) | `autoAssignTasks` |
 | Results visualization | Matrix layout | Partial — table | GAP-F-015 |
 | Student view | Read assignments | Full | [`student-assignments-view.tsx`](../../src/components/student/student-assignments-view.tsx) |
 | Override | Manual reassign | Missing | GAP-F-016 |
 
-**Gaps:** GAP-F-014–017, GAP-A-001–004
+**Gaps:** GAP-F-015–017, GAP-A-001–004
 
 ---
 
@@ -419,56 +419,27 @@ created_at timestamptz
 
 ---
 
-### Phase 2 — Unified group workspace and files
+### Phase 2 — Unified group workspace
 
-**Goal:** PRD Screen 6 complete — one workspace, files included.
+**Goal:** PRD Screen 6 complete — one workspace for board, members, chat, and time estimates.
 
 **In scope**
 
-- Workspace layout — done (GAP-F-012): tabs `Board | Members | Chat | Files`
-- Supabase Storage bucket `group-files` + table `group_files` (GAP-F-013)
-- Upload, list, download UI; RLS by `group_members`
-- Embed or route Kanban inside Board tab
+- Workspace layout — done (GAP-F-012): tabs `Board | Members | Chat | Time estimates`
+- Student time estimate matrix tab (GAP-F-014) — members self-report hours per task
 
 **Out of scope**
 
-- Versioning, comments on files, virus scan
+- In-app file upload / Supabase Storage (GAP-F-013 **removed**; students use Google Drive, Docs, etc.)
 
 **User stories**
 
-- As a student, I manage tasks, chat, and files without leaving my group workspace.
-- As a group member, I download a file uploaded by a peer.
-
-**Schema touchpoints**
-
-```sql
-group_files (
-  id uuid PK,
-  group_id uuid FK,
-  uploaded_by uuid FK,
-  storage_path text,
-  file_name text,
-  mime_type text,
-  size_bytes bigint,
-  created_at timestamptz
-)
-```
-
-**Key files**
-
-- `src/app/student/classrooms/[id]/group/page.tsx`
-- `src/components/student/student-group-workspace-view.tsx`
-- `src/components/student/student-kanban-view.tsx` (merge into tabs)
-- `src/app/actions/files.ts` (new)
-
-**Acceptance criteria**
-
-- Upload ≤ 10MB file; visible to all group members within 5s
-- Kanban accessible from Board tab on mobile
+- As a student, I manage tasks, chat, and time estimates without leaving my group workspace.
+- As a group member, I share deliverables via external cloud links (not in-app files).
 
 **Depends on:** Phase 1
 
-**Estimated effort:** 3–4 weeks
+**Estimated effort:** Done (F-012, F-014); F-013 cancelled
 
 ---
 
@@ -478,7 +449,7 @@ group_files (
 
 **In scope**
 
-- `task_time_estimates` (student_id, task_id, hours) + student UI (GAP-F-014)
+- `task_time_estimates` + student UI — done (GAP-F-014)
 - Officer matrix / heatmap after assign (GAP-F-015)
 - Greedy docs: `docs/algorithms/greedy-assignment.md` (GAP-A-001)
 - Hungarian implementation + toggle in officer tasks (GAP-A-002, A-003)
@@ -625,7 +596,7 @@ classroom_skill_templates (
 |-------|--------|-----------------|
 | 0 | Safety & integrity | 1–2 wk |
 | 1 | Core journeys, landing, mobile nav, activity | 2–3 wk |
-| 2 | Workspace + files | 3–4 wk |
+| 2 | Workspace (no in-app files) | Done |
 | 3 | Assignment matrix, Hungarian, override | 3–4 wk |
 | 4 | Analytics, custom onboarding | 2–3 wk |
 | 5 | Mobile polish, auth, perf | 1–2 wk |
@@ -699,8 +670,7 @@ Use this appendix to avoid re-building shipped features.
 | Table | Phase | Purpose |
 |-------|-------|---------|
 | `classroom_activity_events` | 1 | Activity feed |
-| `group_files` | 2 | File metadata + Storage path |
-| `task_time_estimates` | 3 | Student hours per task |
+| `task_time_estimates` | 3 | Student hours per task (matrix) |
 | `assignment_audit` | 3 | Override history |
 | `classroom_skill_templates` | 4 | Custom onboarding metrics |
 
@@ -737,8 +707,9 @@ Use this appendix to avoid re-building shipped features.
 |--------|-------|
 | GAP-S-001 – GAP-S-009 | 0 |
 | GAP-F-001 – F-008, F-010, F-021, F-022 | 1 |
-| GAP-F-013 | 2 |
-| GAP-F-014 – F-017, GAP-A-001 – A-004 | 3 |
+| GAP-F-013 | — (removed) |
+| GAP-F-014 | 3 (done) |
+| GAP-F-015 – F-017, GAP-A-001 – A-004 | 3 |
 | GAP-F-007, F-011, F-018, F-019, F-020 | 4 |
 | GAP-F-023, GAP-P-001 – P-005 | 5 |
 

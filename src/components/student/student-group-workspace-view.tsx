@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, ClipboardList, Users } from "lucide-react";
+import { ArrowLeft, ClipboardList, Clock, Users } from "lucide-react";
 import type { StudentGroupWorkspaceData } from "@/app/actions/groups";
 import type { GroupMessageItem } from "@/app/actions/messages";
+import type { GroupTimeEstimatesMatrix } from "@/app/actions/time-estimates";
 import type { KanbanTaskData } from "@/app/actions/tasks";
 import { GroupChatPanel } from "@/components/chat/group-chat-panel";
 import { GroupWorkspaceBoardPanel } from "@/components/student/group-workspace-board-panel";
-import { GroupWorkspaceFilesPanel } from "@/components/student/group-workspace-files-panel";
+import { GroupWorkspaceEstimatesPanel } from "@/components/student/group-workspace-estimates-panel";
 import { GroupWorkspaceMembersPanel } from "@/components/student/group-workspace-members-panel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -24,6 +25,7 @@ interface StudentGroupWorkspaceViewProps {
   data: StudentGroupWorkspaceData;
   initialMessages: GroupMessageItem[];
   kanbanTasks: KanbanTaskData[];
+  estimatesMatrix: GroupTimeEstimatesMatrix | null;
 }
 
 function formatStatus(status: string): string {
@@ -36,6 +38,7 @@ export function StudentGroupWorkspaceView({
   data,
   initialMessages,
   kanbanTasks,
+  estimatesMatrix,
 }: StudentGroupWorkspaceViewProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -166,10 +169,11 @@ export function StudentGroupWorkspaceView({
                 Chat
               </TabsTrigger>
               <TabsTrigger
-                value="files"
+                value="estimates"
                 className="rounded-none px-4 py-2.5 after:bottom-0 data-active:font-semibold"
               >
-                Files
+                <Clock className="mr-1.5 inline size-3.5" aria-hidden />
+                Time estimates
               </TabsTrigger>
             </TabsList>
 
@@ -204,8 +208,16 @@ export function StudentGroupWorkspaceView({
               </div>
             </TabsContent>
 
-            <TabsContent value="files" className="mt-0 outline-none">
-              <GroupWorkspaceFilesPanel />
+            <TabsContent value="estimates" className="mt-0 outline-none">
+              <div className={cn(stitch.card, "p-4 sm:p-6", stitch.cardShadow)}>
+                {estimatesMatrix ? (
+                  <GroupWorkspaceEstimatesPanel matrix={estimatesMatrix} />
+                ) : (
+                  <p className="text-sm text-stitch-text-muted">
+                    Loading estimates…
+                  </p>
+                )}
+              </div>
             </TabsContent>
           </Tabs>
         </>
