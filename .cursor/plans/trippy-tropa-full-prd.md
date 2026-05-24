@@ -88,7 +88,7 @@ Legend: **Status** = `missing` | `partial` | `stub`
 |----|------------|---------|--------|----------|-------------------|---------------------|
 | GAP-F-001 | 1 Landing | Hero + dual CTA above fold | full | [`src/app/page.tsx`](../../src/app/page.tsx) | Primary: **Join classroom** → `/join`; Secondary: **Create classroom** → `/officer/classrooms/new` | Both CTAs visible without scrolling on mobile |
 | GAP-F-002 | 1 Landing | Features section (3–4 pillars) | full | [`src/app/page.tsx`](../../src/app/page.tsx) | Dedicated features grid: group formation, task assignment, collaboration, progress | Icons + copy match PRD positioning |
-| GAP-F-003 | 2 Auth | Password reset | stub | [`auth-card.tsx`](../../src/components/auth/auth-card.tsx) | Supabase reset email flow | User receives reset link and can set new password |
+| GAP-F-003 | 2 Auth | Password reset | full | [`forgot-password-card.tsx`](../../src/components/auth/forgot-password-card.tsx), [`reset-password-card.tsx`](../../src/components/auth/reset-password-card.tsx), [`auth/callback/route.ts`](../../src/app/auth/callback/route.ts) | Supabase reset email flow | User receives reset link and can set new password |
 | GAP-F-004 | 2 Auth | SSO placeholder | stub | Auth card “University Portal” toast | Implement OIDC or remove until ready | No dead-end button in production |
 | GAP-F-005 | 2 Auth | Preserve invite `code` in middleware | partial | [`src/lib/supabase/middleware.ts`](../../src/lib/supabase/middleware.ts) | Redirects from `/login` keep `?code=` and `redirect` | Register from invite resumes join after auth |
 | GAP-F-006 | 4 Dashboard | Classroom activity feed | missing | [`officer-dashboard-view.tsx`](../../src/components/officer/officer-dashboard-view.tsx) | Chronological events: enroll, group publish, task changes, assign runs | Officer sees last 20 events per classroom or global |
@@ -144,7 +144,7 @@ Legend: **Status** = `missing` | `partial` | `stub`
 | Screen | Missing | Partial | Full |
 |--------|---------|---------|------|
 | 1 Landing | — | Screen 1 complete (GAP-F-001, F-002) | Page exists |
-| 2 Auth | Password reset, SSO | Invite banner, register server action | Login, register, invite join |
+| 2 Auth | SSO | Password reset done (GAP-F-003); invite banner | Login, register, invite join |
 | 3 Onboarding | Custom metrics per class | — | 3-step 1–5 assessment |
 | 4 Dashboard | Activity feed, create modal | Student avatar, search stub | Officer cards; student live data |
 | 5 Classroom detail | Charts | Skill bars, roster | Roster, invite, group links |
@@ -204,10 +204,10 @@ flowchart LR
 | Login | Email + password | Full | [`auth-card.tsx`](../../src/components/auth/auth-card.tsx), `/login` |
 | Register | Full name, email, password | Full (server `signUpStudent`) | `/register` |
 | Accept invite | Context banner + code | Full | `?code=` on auth; [`/join/c/[code]`](../../src/app/join/c/[code]/page.tsx) |
-| Password reset | Email link | Stub | GAP-F-003 |
+| Password reset | Email link | Full | `/forgot-password`, `/reset-password`, `/auth/callback` |
 | SSO | University portal | Stub | GAP-F-004 |
 
-**Gaps:** GAP-F-003, GAP-F-004, GAP-F-005
+**Gaps:** GAP-F-004, GAP-F-005
 
 ---
 
@@ -597,7 +597,7 @@ classroom_skill_templates (
 
 - Responsive Kanban horizontal scroll + touch DnD (GAP-F-023)
 - Optimistic Kanban / notification updates (GAP-P-002)
-- Password reset (GAP-F-003)
+- Password reset — done (GAP-F-003)
 - Dedupe notification subscriptions (GAP-P-001)
 - Middleware profile cache / JWT claims (performance)
 - Terms & Privacy pages (GAP-P-003)

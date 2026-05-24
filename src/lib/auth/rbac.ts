@@ -6,6 +6,9 @@ export function isPublicPath(pathname: string): boolean {
   if (pathname === "/") return true;
   if (pathname.startsWith("/login")) return true;
   if (pathname.startsWith("/register")) return true;
+  if (pathname.startsWith("/forgot-password")) return true;
+  if (pathname.startsWith("/reset-password")) return true;
+  if (pathname.startsWith("/auth/callback")) return true;
   if (pathname.startsWith("/join")) return true;
   return false;
 }

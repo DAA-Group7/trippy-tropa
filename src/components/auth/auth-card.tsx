@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { signUpStudent } from "@/app/actions/auth";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -41,18 +41,35 @@ interface AuthCardProps {
   mode: AuthMode;
   inviteCode?: string;
   redirect?: string;
+  authError?: string;
+}
+
+function authQueryParams(inviteCode?: string, redirect?: string) {
+  const params = new URLSearchParams();
+  if (inviteCode) params.set("code", inviteCode);
+  if (redirect) params.set("redirect", redirect);
+  return params;
 }
 
 function authHref(mode: AuthMode, inviteCode?: string, redirect?: string) {
   const base = mode === "login" ? routes.login : routes.register;
-  const params = new URLSearchParams();
-  if (inviteCode) params.set("code", inviteCode);
-  if (redirect) params.set("redirect", redirect);
+  const params = authQueryParams(inviteCode, redirect);
   const q = params.toString();
   return q ? `${base}?${q}` : base;
 }
 
-export function AuthCard({ mode, inviteCode, redirect }: AuthCardProps) {
+function forgotPasswordHref(inviteCode?: string, redirect?: string) {
+  const params = authQueryParams(inviteCode, redirect);
+  const q = params.toString();
+  return q ? `${routes.forgotPassword}?${q}` : routes.forgotPassword;
+}
+
+export function AuthCard({
+  mode,
+  inviteCode,
+  redirect,
+  authError,
+}: AuthCardProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const submitLock = useRef(false);
@@ -63,6 +80,14 @@ export function AuthCard({ mode, inviteCode, redirect }: AuthCardProps) {
 
   const joinUrl = inviteCode ? buildJoinUrl(inviteCode) : null;
   const isLogin = mode === "login";
+
+  useEffect(() => {
+    if (authError === "auth_callback") {
+      toast.error(
+        "That link is invalid or expired. Sign in or request a new password reset."
+      );
+    }
+  }, [authError]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -313,15 +338,12 @@ export function AuthCard({ mode, inviteCode, redirect }: AuthCardProps) {
                 Password
               </label>
               {isLogin && (
-                <button
-                  type="button"
+                <Link
+                  href={forgotPasswordHref(inviteCode, redirect)}
                   className="text-xs font-semibold text-[#004ac6] hover:underline"
-                  onClick={() =>
-                    toast.info("Password reset will be available when wired")
-                  }
                 >
                   Forgot password?
-                </button>
+                </Link>
               )}
             </div>
             <div className="relative">

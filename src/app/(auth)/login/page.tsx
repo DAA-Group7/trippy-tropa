@@ -5,9 +5,20 @@ export const metadata = { title: "Sign in" };
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ code?: string; redirect?: string }>;
+  searchParams: Promise<{
+    code?: string;
+    redirect?: string;
+    error?: string;
+  }>;
 }) {
-  const { code, redirect } = await searchParams;
+  const { code, redirect, error } = await searchParams;
 
-  return <AuthCard mode="login" inviteCode={code} redirect={redirect} />;
+  return (
+    <AuthCard
+      mode="login"
+      inviteCode={code}
+      redirect={redirect}
+      authError={error}
+    />
+  );
 }
