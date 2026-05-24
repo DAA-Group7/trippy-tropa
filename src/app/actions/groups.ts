@@ -8,6 +8,11 @@ import {
 } from "@/lib/groups/helpers";
 import { buildJoinUrl } from "@/lib/invite";
 import { notifyGroupAssignments } from "@/app/actions/notifications";
+import {
+  fetchClassroomSkillTemplates,
+  loadStudentSkillsForClassroom,
+} from "@/lib/skills/resolve-classroom-student-skills";
+import { normalizedWeightedAverage } from "@/lib/skills/classroom-skills";
 import { createClient } from "@/lib/supabase/server";
 import { routes } from "@/lib/constants/routes";
 import { recordClassroomActivity } from "@/lib/activity/record";
@@ -33,6 +38,7 @@ export type GroupStudent = {
   initials: string;
   averageSkill: number;
   skills: SkillRatings;
+  weightedTotal?: number;
 };
 
 export type GroupGenerationContext = {
@@ -116,45 +122,52 @@ async function fetchEligibleStudents(
 ): Promise<GroupStudent[]> {
   const { data: members } = await ctx.supabase
     .from("classroom_members")
-    .select("user_id")
+    .select("user_id, skills_assessed_at")
     .eq("classroom_id", classroomId);
 
   const memberIds = (members ?? []).map((m) => m.user_id as string);
   if (memberIds.length === 0) return [];
+
+  const assessedAtByUser = new Map(
+    (members ?? []).map((m) => [m.user_id as string, m.skills_assessed_at as string | null])
+  );
+
+  const templates = await fetchClassroomSkillTemplates(ctx.supabase, classroomId);
+  const resolvedSkills = await loadStudentSkillsForClassroom(
+    ctx.supabase,
+    classroomId,
+    memberIds
+  );
 
   const { data: profiles } = await ctx.supabase
     .from("profiles")
     .select("id, email, full_name, skills_completed")
     .in("id", memberIds);
 
-  const { data: ratings } = await ctx.supabase
-    .from("skill_ratings")
-    .select("user_id, communication, leadership, technical, teamwork")
-    .in("user_id", memberIds);
-
-  const ratingsByUser = new Map(
-    (ratings ?? []).map((r) => [
-      r.user_id,
-      {
-        communication: r.communication,
-        leadership: r.leadership,
-        technical: r.technical,
-        teamwork: r.teamwork,
-      } satisfies SkillRatings,
-    ])
-  );
-
   return (profiles ?? [])
-    .filter((p) => p.skills_completed && ratingsByUser.has(p.id))
+    .filter((p) => {
+      const resolved = resolvedSkills.get(p.id);
+      if (!resolved) return false;
+      if (templates.length > 0) {
+        return Boolean(assessedAtByUser.get(p.id));
+      }
+      return p.skills_completed;
+    })
     .map((p) => {
-      const skills = ratingsByUser.get(p.id)!;
+      const resolved = resolvedSkills.get(p.id)!;
+      const skills = resolved.skills;
       const name = displayName(p.full_name, p.email);
+      const avg =
+        templates.length > 0
+          ? normalizedWeightedAverage(templates, resolved.weightedTotal)
+          : averageSkill(skills);
       return {
         id: p.id,
         name,
         initials: initialsFromName(name),
-        averageSkill: averageSkill(skills),
+        averageSkill: avg,
         skills,
+        weightedTotal: resolved.weightedTotal,
       };
     });
 }

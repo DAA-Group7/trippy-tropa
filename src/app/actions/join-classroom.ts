@@ -6,6 +6,7 @@ import { recordClassroomActivity } from "@/lib/activity/record";
 import { createClient } from "@/lib/supabase/server";
 import { routes } from "@/lib/constants/routes";
 import { createLogger, maskUserId } from "@/lib/logger";
+import { classroomUsesCustomTemplates } from "@/lib/skills/resolve-classroom-student-skills";
 import type { SkillRatings } from "@/types/database";
 
 const log = createLogger("join");
@@ -97,10 +98,16 @@ export async function enrollInClassroom(
   }
 
   if (!profile.skills_completed) {
-    return {
-      ok: false,
-      error: "Complete skill assessment before joining a classroom.",
-    };
+    const usesClassroomSkills = await classroomUsesCustomTemplates(
+      supabase,
+      classroom.id
+    );
+    if (!usesClassroomSkills) {
+      return {
+        ok: false,
+        error: "Complete skill assessment before joining a classroom.",
+      };
+    }
   }
 
   const { data: existing } = await supabase
@@ -296,6 +303,24 @@ export async function processJoinInvite(
     case "ready_to_enroll": {
       const result = await enrollInClassroom(code);
       if (!result.ok) return { ok: false, error: result.error };
+
+      const { memberNeedsClassroomAssessment } = await import(
+        "@/app/actions/classroom-skills"
+      );
+      const { onboardingWithCode } = await import("@/lib/auth/join-flow");
+      const { getSessionUser: getUser } = await import("@/lib/auth/session");
+      const { user: currentUser } = await getUser();
+
+      if (
+        currentUser &&
+        (await memberNeedsClassroomAssessment(
+          result.classroomId,
+          currentUser.id
+        ))
+      ) {
+        return { ok: true, redirectTo: onboardingWithCode(code) };
+      }
+
       const joined = result.alreadyMember ? "already" : "new";
       return {
         ok: true,

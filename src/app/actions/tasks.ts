@@ -34,6 +34,7 @@ import {
   parseRequiredSkills,
   statusLabel,
 } from "@/lib/tasks/helpers";
+import { loadStudentSkillsForClassroom } from "@/lib/skills/resolve-classroom-student-skills";
 import { createClient } from "@/lib/supabase/server";
 import { routes } from "@/lib/constants/routes";
 import type { SkillRatings, TaskStatus } from "@/types/database";
@@ -455,11 +456,12 @@ export async function overrideTaskAssignment(
       };
     }
 
-    const { data: rating } = await ctx.supabase
-      .from("skill_ratings")
-      .select("communication, leadership, technical, teamwork")
-      .eq("user_id", parsed.data.newAssigneeId)
-      .maybeSingle();
+    const resolvedSkills = await loadStudentSkillsForClassroom(
+      ctx.supabase,
+      parsed.data.classroomId,
+      [parsed.data.newAssigneeId]
+    );
+    const rating = resolvedSkills.get(parsed.data.newAssigneeId)?.skills;
 
     if (!rating) {
       return {
@@ -702,6 +704,20 @@ export async function autoAssignTasks(
       groupIds
     );
 
+    const { data: allGroupMembers } = await ctx.supabase
+      .from("group_members")
+      .select("user_id")
+      .in("group_id", groupIds);
+
+    const allMemberIds = [
+      ...new Set((allGroupMembers ?? []).map((m) => m.user_id as string)),
+    ];
+    const classroomSkillsMap = await loadStudentSkillsForClassroom(
+      ctx.supabase,
+      classroomId,
+      allMemberIds
+    );
+
     let assignedCount = 0;
     let skippedAssigned = 0;
     const notifyRows: {
@@ -725,29 +741,15 @@ export async function autoAssignTasks(
         .select("id, email, full_name, skills_completed")
         .in("id", memberIds);
 
-      const { data: ratings } = await ctx.supabase
-        .from("skill_ratings")
-        .select("user_id, communication, leadership, technical, teamwork")
-        .in("user_id", memberIds);
-
-      const ratingsByUser = new Map(
-        (ratings ?? []).map((r) => [
-          r.user_id,
-          {
-            communication: r.communication,
-            leadership: r.leadership,
-            technical: r.technical,
-            teamwork: r.teamwork,
-          } satisfies SkillRatings,
-        ])
-      );
-
       const students: StudentCapacity[] = (profiles ?? [])
-        .filter((p) => p.skills_completed && ratingsByUser.has(p.id))
+        .filter((p) => {
+          const resolved = classroomSkillsMap.get(p.id);
+          return p.skills_completed && resolved;
+        })
         .map((p) => ({
           id: p.id,
           name: displayName(p.full_name, p.email),
-          skills: ratingsByUser.get(p.id)!,
+          skills: classroomSkillsMap.get(p.id)!.skills,
           availableHours: DEFAULT_STUDENT_CAPACITY_HOURS,
         }));
 

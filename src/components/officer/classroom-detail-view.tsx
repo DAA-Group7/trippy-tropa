@@ -32,7 +32,9 @@ import type {
   StudentParticipationRow,
 } from "@/app/actions/participation";
 import { ClassroomAnalyticsCharts } from "@/components/officer/classroom-analytics-charts";
+import { ClassroomSkillTemplatesEditor } from "@/components/officer/classroom-skill-templates-editor";
 import { ParticipationDashboard } from "@/components/officer/participation-dashboard";
+import type { ClassroomSkillTemplateRow } from "@/lib/skills/classroom-skills";
 import { OfficerPageHeader } from "@/components/layout/officer-page-header";
 import { routes } from "@/lib/constants/routes";
 import { cn } from "@/lib/utils";
@@ -44,6 +46,7 @@ interface ClassroomDetailViewProps {
   classroom: ClassroomDetailFull;
   classroomId: string;
   participation: ClassroomParticipationData | null;
+  skillTemplates: ClassroomSkillTemplateRow[];
 }
 
 function formatSubjectLabel(subject: string | null): string {
@@ -73,11 +76,13 @@ function StudentRow({
   student: ClassroomRosterStudent;
   onSelect: (student: ClassroomRosterStudent) => void;
 }) {
-  const skillLabel = student.averageSkill
+  const skillLabel = student.classroomAssessed && student.averageSkill
     ? `${student.averageSkill} / 5 avg`
-    : student.skillsCompleted
-      ? "Assessed"
-      : "Not assessed";
+    : student.skillsCompleted && student.averageSkill
+      ? `${student.averageSkill} / 5 avg`
+      : student.skillsCompleted || student.classroomAssessed
+        ? "Assessed"
+        : "Not assessed";
 
   return (
     <button
@@ -150,7 +155,7 @@ function StudentDetailSheet({
               Skill assessment
             </p>
             <p className="mt-1 text-sm text-[#191b23]">
-              {student.skillsCompleted
+              {student.classroomAssessed || student.skillsCompleted
                 ? student.averageSkill
                   ? `Complete — ${student.averageSkill} / 5 average`
                   : "Marked complete"
@@ -158,7 +163,34 @@ function StudentDetailSheet({
             </p>
           </div>
 
-          {student.skills ? (
+          {student.skillBreakdown && student.skillBreakdown.length > 0 ? (
+            <ul className="space-y-3">
+              {student.skillBreakdown.map((entry) => {
+                const percent = (entry.rating / 5) * 100;
+                return (
+                  <li key={entry.metricKey}>
+                    <div className="mb-1 flex justify-between text-sm">
+                      <span className="font-medium text-[#191b23]">
+                        {entry.label}
+                        {entry.multiplier !== 1 && (
+                          <span className="ml-1 text-xs text-[#505f76]">
+                            ×{entry.multiplier}
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-[#434655]">{entry.rating} / 5</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-[#e7e7f3]">
+                      <div
+                        className="h-full rounded-full bg-[#004ac6]"
+                        style={{ width: `${percent}%` }}
+                      />
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : student.skills ? (
             <ul className="space-y-3">
               {SKILL_DEFINITIONS.map((def) => {
                 const value = student.skills![def.key];
@@ -230,6 +262,7 @@ export function ClassroomDetailView({
   classroom,
   classroomId,
   participation,
+  skillTemplates,
 }: ClassroomDetailViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStudent, setSelectedStudent] =
@@ -428,6 +461,14 @@ export function ClassroomDetailView({
                   </span>
                 </p>
               </div>
+            </div>
+
+            <div className="lg:col-span-12">
+              <ClassroomSkillTemplatesEditor
+                classroomId={classroomId}
+                subject={classroom.subject}
+                initialTemplates={skillTemplates}
+              />
             </div>
 
             <ClassroomAnalyticsCharts classroom={classroom} />

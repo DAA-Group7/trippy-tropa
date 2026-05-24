@@ -5,6 +5,7 @@ import {
   onboardingWithCode,
 } from "@/lib/auth/join-flow";
 import { getSessionUser } from "@/lib/auth/session";
+import { memberNeedsClassroomAssessment } from "@/app/actions/classroom-skills";
 import {
   enrollInClassroom,
   getClassroomByInviteCode,
@@ -62,6 +63,12 @@ export default async function JoinByCodePage({
             error={result.error}
           />
         );
+      }
+      if (
+        user &&
+        (await memberNeedsClassroomAssessment(result.classroomId, user.id))
+      ) {
+        redirect(onboardingWithCode(code));
       }
       const joined = result.alreadyMember ? "already" : "new";
       redirect(

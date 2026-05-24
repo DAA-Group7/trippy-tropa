@@ -2,8 +2,17 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { seedDefaultClassroomSkillTemplates } from "@/app/actions/classroom-skills";
 import { createClient } from "@/lib/supabase/server";
 import { SKILL_DEFINITIONS } from "@/lib/constants/skills";
+import {
+  normalizedWeightedAverage,
+  type ClassroomSkillTemplateRow,
+} from "@/lib/skills/classroom-skills";
+import {
+  fetchClassroomSkillTemplates,
+  loadStudentSkillsForClassroom,
+} from "@/lib/skills/resolve-classroom-student-skills";
 import { buildJoinUrl, generateInviteCode } from "@/lib/invite";
 import { routes } from "@/lib/constants/routes";
 import { createLogger, maskUserId } from "@/lib/logger";
@@ -67,22 +76,32 @@ export type ClassroomDetail = ClassroomBrief & {
   maxGroups: number;
 };
 
+export type ClassroomRosterSkillEntry = {
+  metricKey: string;
+  label: string;
+  rating: number;
+  multiplier: number;
+};
+
 export type ClassroomRosterStudent = {
   id: string;
   name: string;
   email: string;
   skillsCompleted: boolean;
+  classroomAssessed: boolean;
   averageSkill: number | null;
   skills: SkillRatings | null;
+  skillBreakdown: ClassroomRosterSkillEntry[] | null;
   joinedAt: string;
 };
 
 export type ClassroomSkillMetric = {
-  key: SkillKey;
+  key: string;
   label: string;
   average: number;
   percent: number;
   barClass: string;
+  multiplier: number;
 };
 
 export type ClassroomDetailFull = ClassroomDetail & {
@@ -129,6 +148,43 @@ function averageSkillRating(ratings: SkillRatings): number {
   return Math.round((sum / 4) * 10) / 10;
 }
 
+function buildSkillMetricsFromTemplates(
+  templates: ClassroomSkillTemplateRow[],
+  ratingsByUser: Map<string, Record<string, number>>
+): ClassroomSkillMetric[] {
+  const userIds = [...ratingsByUser.keys()];
+  if (templates.length === 0 || userIds.length === 0) {
+    return SKILL_DEFINITIONS.map((skill, index) => ({
+      key: skill.key,
+      label: skill.label,
+      average: 0,
+      percent: 0,
+      barClass: SKILL_BAR_CLASSES[index % SKILL_BAR_CLASSES.length],
+      multiplier: 1,
+    }));
+  }
+
+  return templates.map((template, index) => {
+    const values = userIds
+      .map((uid) => ratingsByUser.get(uid)?.[template.metricKey])
+      .filter((v): v is number => v != null);
+    const average =
+      values.length > 0
+        ? Math.round(
+            (values.reduce((sum, v) => sum + v, 0) / values.length) * 10
+          ) / 10
+        : 0;
+    return {
+      key: template.metricKey,
+      label: template.label,
+      average,
+      percent: Math.round((average / 5) * 100),
+      barClass: SKILL_BAR_CLASSES[index % SKILL_BAR_CLASSES.length],
+      multiplier: template.multiplier,
+    };
+  });
+}
+
 function buildSkillMetrics(
   ratingsList: SkillRatings[]
 ): ClassroomSkillMetric[] {
@@ -139,6 +195,7 @@ function buildSkillMetrics(
       average: 0,
       percent: 0,
       barClass: SKILL_BAR_CLASSES[index % SKILL_BAR_CLASSES.length],
+      multiplier: 1,
     }));
   }
 
@@ -151,6 +208,7 @@ function buildSkillMetrics(
       average,
       percent: Math.round((average / 5) * 100),
       barClass: SKILL_BAR_CLASSES[index % SKILL_BAR_CLASSES.length],
+      multiplier: 1,
     };
   });
 }
@@ -229,11 +287,14 @@ export async function getClassroomDetailFull(
 
     const { data: members } = await ctx.supabase
       .from("classroom_members")
-      .select("user_id, joined_at")
+      .select("user_id, joined_at, skills_assessed_at")
       .eq("classroom_id", id)
       .order("joined_at", { ascending: true });
 
     const memberIds = (members ?? []).map((m) => m.user_id as string);
+    const assessedAtByUser = new Map(
+      (members ?? []).map((m) => [m.user_id as string, m.skills_assessed_at as string | null])
+    );
 
     let profiles: {
       id: string;
@@ -252,46 +313,60 @@ export async function getClassroomDetailFull(
 
     const profileById = new Map(profiles.map((p) => [p.id, p]));
 
-    let skillRows: ({ user_id: string } & SkillRatings)[] = [];
-    if (memberIds.length > 0) {
-      const { data } = await ctx.supabase
-        .from("skill_ratings")
-        .select("user_id, communication, leadership, technical, teamwork")
-        .in("user_id", memberIds);
-      skillRows = (data ?? []) as typeof skillRows;
-    }
-
-    const ratingsByUser = new Map(
-      skillRows.map((r) => [
-        r.user_id,
-        {
-          communication: r.communication,
-          leadership: r.leadership,
-          technical: r.technical,
-          teamwork: r.teamwork,
-        } satisfies SkillRatings,
-      ])
-    );
+    const templates = await fetchClassroomSkillTemplates(ctx.supabase, id);
+    const resolvedSkills =
+      memberIds.length > 0
+        ? await loadStudentSkillsForClassroom(ctx.supabase, id, memberIds)
+        : new Map();
 
     const roster: ClassroomRosterStudent[] = (members ?? []).map((member) => {
       const userId = member.user_id as string;
       const profile = profileById.get(userId);
-      const ratings = ratingsByUser.get(userId) ?? null;
       const email = profile?.email ?? "unknown@student.local";
+      const resolved = resolvedSkills.get(userId);
+      const classroomAssessed = Boolean(assessedAtByUser.get(userId));
+      const skills = resolved?.skills ?? null;
+
+      const skillBreakdown =
+        templates.length > 0 && resolved
+          ? templates.map((template) => ({
+              metricKey: template.metricKey,
+              label: template.label,
+              rating: resolved.ratingsByMetricKey[template.metricKey] ?? 0,
+              multiplier: template.multiplier,
+            }))
+          : null;
+
+      const averageSkill = resolved
+        ? templates.length > 0
+          ? normalizedWeightedAverage(templates, resolved.weightedTotal)
+          : skills
+            ? averageSkillRating(skills)
+            : null
+        : null;
 
       return {
         id: userId,
         name: displayName(profile?.full_name ?? null, email),
         email,
         skillsCompleted: profile?.skills_completed ?? false,
-        averageSkill: ratings ? averageSkillRating(ratings) : null,
-        skills: ratings,
+        classroomAssessed,
+        averageSkill,
+        skills,
+        skillBreakdown,
         joinedAt: member.joined_at as string,
       };
     });
 
-    const ratingsList = [...ratingsByUser.values()];
-    const skillsAssessedCount = roster.filter((s) => s.skillsCompleted).length;
+    const ratingsByMetricUser = new Map<string, Record<string, number>>();
+    for (const [userId, resolved] of resolvedSkills) {
+      ratingsByMetricUser.set(userId, resolved.ratingsByMetricKey);
+    }
+
+    const ratingsList = [...resolvedSkills.values()].map((r) => r.skills);
+    const skillsAssessedCount = roster.filter(
+      (s) => s.classroomAssessed || (templates.length === 0 && s.skillsCompleted)
+    ).length;
 
     const { count: groupsCount } = await ctx.supabase
       .from("groups")
@@ -303,7 +378,10 @@ export async function getClassroomDetailFull(
       groupsCount: groupsCount ?? 0,
       skillsAssessedCount,
       roster,
-      skillMetrics: buildSkillMetrics(ratingsList),
+      skillMetrics:
+        templates.length > 0
+          ? buildSkillMetricsFromTemplates(templates, ratingsByMetricUser)
+          : buildSkillMetrics(ratingsList),
     };
   } catch {
     return null;
@@ -483,6 +561,8 @@ export async function createClassroom(
             : error.message,
       };
     }
+
+    await seedDefaultClassroomSkillTemplates(supabase, data.id);
 
     revalidatePath(routes.officer.dashboard);
 

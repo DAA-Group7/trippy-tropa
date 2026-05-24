@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Info, Link2 } from "lucide-react";
 import { toast } from "sonner";
+import { completeClassroomSkillAssessment } from "@/app/actions/classroom-skills";
 import { completeSkillAssessment } from "@/app/actions/join-classroom";
 import {
   ONBOARDING_STEPS,
@@ -14,10 +15,11 @@ import {
 import { buildJoinUrl } from "@/lib/invite";
 import { routes } from "@/lib/constants/routes";
 import { createLogger } from "@/lib/logger";
-
-const log = createLogger("onboarding:skills");
+import type { ClassroomSkillTemplateRow } from "@/lib/skills/classroom-skills";
 import type { SkillKey } from "@/types/database";
 import { cn } from "@/lib/utils";
+
+const log = createLogger("onboarding:skills");
 
 const cardShadow =
   "shadow-[0_1px_3px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.03)]";
@@ -29,31 +31,52 @@ const DEFAULT_RATINGS: Record<SkillKey, number> = {
   teamwork: 3,
 };
 
+export type OnboardingSkillContext = {
+  classroomId: string | null;
+  classroomName: string | null;
+  subject: string | null;
+  templates: ClassroomSkillTemplateRow[];
+  usesClassroomTemplates: boolean;
+};
+
 interface SkillAssessmentViewProps {
   inviteCode?: string;
+  onboardingContext?: OnboardingSkillContext;
 }
 
 function SkillRatingRow({
-  skillKey,
+  fieldKey,
   label,
   tooltip,
+  description,
+  multiplier,
   value,
   onChange,
 }: {
-  skillKey: SkillKey;
+  fieldKey: string;
   label: string;
   tooltip: string;
+  description?: string | null;
+  multiplier?: number;
   value: number;
   onChange: (value: number) => void;
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <label className="flex items-center gap-1 text-lg font-semibold text-[#191b23]">
+      <label className="flex flex-wrap items-center gap-1 text-lg font-semibold text-[#191b23]">
         {label}
+        {multiplier != null && multiplier !== 1 && (
+          <span className="rounded-full bg-[#dbe1ff] px-2 py-0.5 text-xs font-medium text-[#004ac6]">
+            ×{multiplier} weight
+          </span>
+        )}
         <span title={tooltip} className="inline-flex">
           <Info className="size-[18px] cursor-help text-[#737686]" />
         </span>
       </label>
+      {description && (
+        <p className="text-sm text-[#505f76]">{description}</p>
+      )}
       <div className="flex items-center justify-between gap-1 rounded-lg border border-[#c3c6d7] bg-[#f3f3fe] p-2 sm:gap-2">
         {RATING_OPTIONS.map((option) => (
           <label
@@ -62,7 +85,7 @@ function SkillRatingRow({
           >
             <input
               type="radio"
-              name={skillKey}
+              name={fieldKey}
               value={option.value}
               checked={value === option.value}
               onChange={() => onChange(option.value)}
@@ -134,18 +157,67 @@ function ProgressSteps({ currentStep }: { currentStep: number }) {
   );
 }
 
-export function SkillAssessmentView({ inviteCode }: SkillAssessmentViewProps) {
+export function SkillAssessmentView({
+  inviteCode,
+  onboardingContext,
+}: SkillAssessmentViewProps) {
   const router = useRouter();
   const [wizardStep, setWizardStep] = useState(1);
-  const [ratings, setRatings] =
+  const usesClassroom =
+    onboardingContext?.usesClassroomTemplates &&
+    onboardingContext.templates.length > 0 &&
+    onboardingContext.classroomId;
+
+  const metrics = useMemo(() => {
+    if (usesClassroom) {
+      return onboardingContext!.templates.map((t) => ({
+        key: t.metricKey,
+        label: t.label,
+        description: t.description,
+        tooltip: t.tooltip ?? t.label,
+        multiplier: t.multiplier,
+      }));
+    }
+    return SKILL_DEFINITIONS.map((skill) => ({
+      key: skill.key,
+      label: skill.label,
+      description: skill.description,
+      tooltip: skill.tooltip,
+      multiplier: 1,
+    }));
+  }, [usesClassroom, onboardingContext]);
+
+  const defaultClassroomRatings = useMemo(() => {
+    const initial: Record<string, number> = {};
+    for (const metric of metrics) {
+      initial[metric.key] = 3;
+    }
+    return initial;
+  }, [metrics]);
+
+  const [globalRatings, setGlobalRatings] =
     useState<Record<SkillKey, number>>(DEFAULT_RATINGS);
+  const [classroomRatings, setClassroomRatings] = useState<
+    Record<string, number>
+  >(defaultClassroomRatings);
   const [isPending, startTransition] = useTransition();
 
   const joinUrl = inviteCode ? buildJoinUrl(inviteCode) : null;
 
-  const setSkillRating = (key: SkillKey, value: number) => {
-    setRatings((prev) => ({ ...prev, [key]: value }));
+  const setMetricRating = (key: string, value: number) => {
+    if (usesClassroom) {
+      setClassroomRatings((prev) => ({ ...prev, [key]: value }));
+      return;
+    }
+    setGlobalRatings((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
   };
+
+  const currentRatings: Record<string, number> = usesClassroom
+    ? classroomRatings
+    : globalRatings;
 
   const handleComplete = () => {
     if (wizardStep < 3) {
@@ -154,8 +226,18 @@ export function SkillAssessmentView({ inviteCode }: SkillAssessmentViewProps) {
     }
 
     startTransition(async () => {
-      log.info("complete_attempt", { hasInviteCode: Boolean(inviteCode) });
-      const result = await completeSkillAssessment(ratings, inviteCode);
+      log.info("complete_attempt", {
+        hasInviteCode: Boolean(inviteCode),
+        usesClassroom: Boolean(usesClassroom),
+      });
+
+      const result = usesClassroom
+        ? await completeClassroomSkillAssessment(
+            onboardingContext!.classroomId!,
+            classroomRatings,
+            inviteCode
+          )
+        : await completeSkillAssessment(globalRatings, inviteCode);
 
       if (!result.ok) {
         log.warn("complete_failed", { error: result.error });
@@ -183,6 +265,12 @@ export function SkillAssessmentView({ inviteCode }: SkillAssessmentViewProps) {
     router.back();
   };
 
+  const title = usesClassroom
+    ? onboardingContext?.classroomName
+      ? `${onboardingContext.classroomName} — Skill Assessment`
+      : "Classroom Skill Assessment"
+    : "Skill Assessment";
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-[#faf8ff] p-4 md:p-6">
       <div
@@ -193,11 +281,12 @@ export function SkillAssessmentView({ inviteCode }: SkillAssessmentViewProps) {
       >
         <div className="border-b border-[#c3c6d7] p-6">
           <h1 className="text-2xl font-semibold tracking-tight text-[#191b23] sm:text-3xl">
-            Skill Assessment
+            {title}
           </h1>
           <p className="mt-2 text-base text-[#434655]">
-            Please rate your proficiency in the following areas to help us tailor
-            your experience.
+            {usesClassroom
+              ? "Rate yourself on this classroom's skills. Your instructor configured weights for group placement."
+              : "Please rate your proficiency in the following areas to help us tailor your experience."}
           </p>
           {inviteCode && joinUrl && (
             <div className="mt-4 flex items-start gap-2 rounded-lg border border-[#004ac6]/20 bg-[#dbe1ff]/40 p-3">
@@ -216,14 +305,16 @@ export function SkillAssessmentView({ inviteCode }: SkillAssessmentViewProps) {
 
         <div className="flex flex-col gap-8 p-6">
           {wizardStep === 1 &&
-            SKILL_DEFINITIONS.map((skill) => (
+            metrics.map((metric) => (
               <SkillRatingRow
-                key={skill.key}
-                skillKey={skill.key}
-                label={skill.label}
-                tooltip={skill.tooltip}
-                value={ratings[skill.key]}
-                onChange={(v) => setSkillRating(skill.key, v)}
+                key={metric.key}
+                fieldKey={metric.key}
+                label={metric.label}
+                tooltip={metric.tooltip}
+                description={metric.description}
+                multiplier={metric.multiplier}
+                value={currentRatings[metric.key] ?? 3}
+                onChange={(v) => setMetricRating(metric.key, v)}
               />
             ))}
 
@@ -233,8 +324,9 @@ export function SkillAssessmentView({ inviteCode }: SkillAssessmentViewProps) {
                 Experience
               </h2>
               <p className="mt-2 text-sm text-[#505f76]">
-                Confirm you are ready to use these ratings for balanced group
-                placement. You can go back to adjust any skill on step 1.
+                {usesClassroom
+                  ? "Weighted scores (rating × multiplier) help balance groups fairly for this class. You can go back to adjust any rating."
+                  : "Confirm you are ready to use these ratings for balanced group placement. You can go back to adjust any skill on step 1."}
               </p>
             </div>
           )}
@@ -246,16 +338,21 @@ export function SkillAssessmentView({ inviteCode }: SkillAssessmentViewProps) {
                 Confirm your skill ratings before submitting.
               </p>
               <ul className="divide-y divide-[#c3c6d7] rounded-lg border border-[#c3c6d7]">
-                {SKILL_DEFINITIONS.map((skill) => (
+                {metrics.map((metric) => (
                   <li
-                    key={skill.key}
+                    key={metric.key}
                     className="flex items-center justify-between px-4 py-3"
                   >
                     <span className="text-sm font-medium text-[#191b23]">
-                      {skill.label}
+                      {metric.label}
+                      {metric.multiplier !== 1 && (
+                        <span className="ml-1 text-xs text-[#505f76]">
+                          (×{metric.multiplier})
+                        </span>
+                      )}
                     </span>
                     <span className="text-sm text-[#004ac6]">
-                      {ratings[skill.key]} / 5
+                      {currentRatings[metric.key] ?? 3} / 5
                     </span>
                   </li>
                 ))}

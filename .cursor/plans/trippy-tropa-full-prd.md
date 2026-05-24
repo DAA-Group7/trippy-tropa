@@ -162,8 +162,8 @@ Legend: **Status** = `missing` | `partial` | `stub`
 | GAP-F-016 | 7 Assignment | Manual **task** assignment override | full | [`012_assignment_audit.sql`](../../supabase/migrations/012_assignment_audit.sql), [`task-assignment-override-dialog.tsx`](../../src/components/officer/task-assignment-override-dialog.tsx), `overrideTaskAssignment` in [`tasks.ts`](../../src/app/actions/tasks.ts) | **Officer** reassigns a **task** to another group member; optional reason; audit log | Override persists; student notification sent |
 | GAP-F-017 | 7 Assignment | Idempotent auto-assign | full | [`autoAssignTasks`](../../src/app/actions/tasks.ts), [`officer-tasks-view.tsx`](../../src/components/officer/officer-tasks-view.tsx) | Default: only unassigned tasks; `forceReassign` for officer | Re-run does not reshuffle unless forced |
 | GAP-F-018 | 8 Teacher | Participation metrics | full | [`participation.ts`](../../src/app/actions/participation.ts), [`participation-dashboard.tsx`](../../src/components/officer/participation-dashboard.tsx), [`013_tasks_updated_at.sql`](../../supabase/migrations/013_tasks_updated_at.sql) | Per-student: last active, tasks moved, messages sent, assessment status | Officer identifies at-risk students |
-| GAP-F-019 | 8 Teacher | Override assignments (classroom view) | missing | — | Bulk view of assignments with inline reassign | Same as GAP-F-016 at classroom scope |
-| GAP-F-020 | 3 Onboarding | Officer-customizable skills | missing | Fixed 4 skills [`skills.ts`](../../src/lib/constants/skills.ts) | Officer defines metrics per classroom (label, description, 1–5 scale) | Dynamic onboarding form per class |
+| GAP-F-019 | 8 Teacher | Cross-classroom student reassignment | **removed** | — | Officers **invite only**; no bulk reassign of students between classrooms | N/A |
+| GAP-F-020 | 3 Onboarding | Officer-customizable skills + multipliers | full | [`014_classroom_skill_templates.sql`](../../supabase/migrations/014_classroom_skill_templates.sql), [`classroom-skills.ts`](../../src/app/actions/classroom-skills.ts), [`classroom-skill-templates-editor.tsx`](../../src/components/officer/classroom-skill-templates-editor.tsx), [`skill-assessment-view.tsx`](../../src/components/onboarding/skill-assessment-view.tsx) | Officer defines per-class metrics (label, description, 1–5, **multiplier**); students self-assess on join; weighted scores drive group balance | Dynamic onboarding per classroom; officer editor on classroom detail |
 | GAP-F-021 | 9 Mobile | Tasks tab routing | partial | [`student-shell.tsx`](../../src/components/layout/student-shell.tsx) `match: () => false` | Tasks tab → aggregate task list or last classroom board | Tab highlights correctly |
 | GAP-F-022 | 9 Mobile | Notifications tab routing | partial | Hash `#updates` on dashboard only | Dedicated `/student/notifications` or scroll to feed | Tab opens notification list |
 | GAP-F-023 | 9 Mobile | Responsive Kanban | partial | [`kanban-board.tsx`](../../src/components/tasks/kanban-board.tsx) | Horizontal scroll columns on `sm`; touch DnD | Usable on 375px width |
@@ -277,9 +277,9 @@ flowchart LR
 | Multi-step wizard | 3 steps | Full | [`skill-assessment-view.tsx`](../../src/components/onboarding/skill-assessment-view.tsx) |
 | 1–5 ratings | 4 fixed skills | Full | `SKILL_DEFINITIONS` |
 | Progress indicator | Step 1/3 | Full | Wizard UI |
-| Officer-custom metrics | Per classroom | Missing | GAP-F-020 |
+| Officer-custom metrics | Per classroom + multipliers | Full | [`classroom-skill-templates-editor.tsx`](../../src/components/officer/classroom-skill-templates-editor.tsx) |
 
-**Gaps:** GAP-F-020 (Phase 4)
+**Gaps:** None (GAP-F-020 done)
 
 ---
 
@@ -361,9 +361,9 @@ flowchart LR
 | Participation metrics | Engagement over time | Full — classroom detail | GAP-F-018 |
 | Classroom activity feed | Recent events | Full | Officer dashboard (GAP-F-006) |
 | Student activity | Per-student participation | Full — table + roster sheet | GAP-F-018 |
-| Override assignments | Reassign UI | Missing | GAP-F-019 |
+| Override assignments | Per-task reassign (officer tasks) | Full | GAP-F-016 — no cross-classroom student moves |
 
-**Gaps:** GAP-F-019
+**Gaps:** None (GAP-F-019 removed — invite-only enrollment)
 
 ---
 
@@ -514,7 +514,7 @@ created_at timestamptz
 - Officer matrix / heatmap after assign — done (GAP-F-015)
 - Greedy docs: `docs/algorithms/greedy-assignment.md` (GAP-A-001)
 - Hungarian implementation + toggle in officer tasks (GAP-A-002, A-003)
-- Manual override + `assignment_audit` log — done (GAP-F-016); classroom bulk view (GAP-F-019)
+- Manual override + `assignment_audit` log — done (GAP-F-016); cross-classroom student reassignment — **removed** (GAP-F-019)
 - Auto-assign: unassigned-only default — done (GAP-F-017)
 
 **Out of scope**
@@ -577,7 +577,7 @@ assignment_audit (
 **In scope**
 
 - Participation dashboard: charts (Recharts), per-student table — done (GAP-F-018)
-- `classroom_skill_templates` + dynamic onboarding form (GAP-F-020)
+- `classroom_skill_templates` + dynamic onboarding form + multipliers — done (GAP-F-020)
 - Create classroom sheet — done (GAP-F-007)
 - Classroom detail charts — done (GAP-F-011)
 
@@ -777,7 +777,8 @@ Use this appendix to avoid re-building shipped features.
 | GAP-F-017 | 3 (done) |
 | GAP-A-001 – A-004 | 3 |
 | GAP-F-018 | 4 (done) |
-| GAP-F-007, F-011, F-019, F-020 | 4 |
+| GAP-F-007, F-011, F-020 | 4 (done) |
+| GAP-F-019 | — (removed) |
 | GAP-F-023, GAP-P-001 – P-005 | 5 |
 
 ---

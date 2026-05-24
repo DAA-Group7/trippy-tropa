@@ -63,6 +63,7 @@ function toStudentWithSkills(students: GroupStudent[]): StudentWithSkills[] {
     id: s.id,
     name: s.name,
     skills: s.skills,
+    weightedTotal: s.weightedTotal,
   }));
 }
 

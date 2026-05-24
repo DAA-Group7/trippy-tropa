@@ -4,6 +4,8 @@ export interface StudentWithSkills {
   id: string;
   name: string;
   skills: SkillRatings;
+  /** When set, used for greedy balancing instead of raw skill sum. */
+  weightedTotal?: number;
 }
 
 export interface BalancedGroup {
@@ -24,10 +26,11 @@ export function generateBalancedGroups(
   if (students.length === 0 || groupCount < 1) return [];
 
   const skillSum = (s: StudentWithSkills) =>
+    s.weightedTotal ??
     s.skills.communication +
-    s.skills.leadership +
-    s.skills.technical +
-    s.skills.teamwork;
+      s.skills.leadership +
+      s.skills.technical +
+      s.skills.teamwork;
 
   const sorted = [...students].sort((a, b) => skillSum(b) - skillSum(a));
   const groups: BalancedGroup[] = Array.from({ length: groupCount }, (_, i) => ({

@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { getClassroomSkillTemplatesForOfficer } from "@/app/actions/classroom-skills";
 import { getClassroomDetailFull } from "@/app/actions/classrooms";
 import { getClassroomParticipation } from "@/app/actions/participation";
 import { ClassroomDetailView } from "@/components/officer/classroom-detail-view";
@@ -11,9 +12,10 @@ export default async function ClassroomDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [classroom, participation] = await Promise.all([
+  const [classroom, participation, skillTemplates] = await Promise.all([
     getClassroomDetailFull(id),
     getClassroomParticipation(id),
+    getClassroomSkillTemplatesForOfficer(id),
   ]);
 
   if (!classroom) {
@@ -25,6 +27,7 @@ export default async function ClassroomDetailPage({
       classroom={classroom}
       classroomId={id}
       participation={participation}
+      skillTemplates={skillTemplates ?? []}
     />
   );
 }
