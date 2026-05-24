@@ -23,6 +23,7 @@ import { BrandTitle } from "@/components/brand/brand-mark";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { NotificationsBell } from "@/components/notifications/notifications-bell";
 import { NotificationsList } from "@/components/notifications/notifications-list";
+import { JoinClassroomInline } from "@/components/student/join-classroom-inline";
 import { useNotificationsRealtime } from "@/hooks/use-notifications-realtime";
 import { stitch } from "@/lib/design/stitch";
 import { routes } from "@/lib/constants/routes";
@@ -116,13 +117,13 @@ export function StudentDashboardView({
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Link
-              href={routes.join}
+            <a
+              href="#join-classroom"
               className="inline-flex items-center gap-1 rounded-lg bg-[#2563eb] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#004ac6]"
             >
               <Link2 className="size-[18px]" />
               Join classroom
-            </Link>
+            </a>
             <button
               type="button"
               onClick={() => toast.info("New task — coming soon")}
@@ -160,9 +161,8 @@ export function StudentDashboardView({
                     stitch.cardShadow
                   )}
                 >
-                  No active tasks. Join a classroom with invite code{" "}
-                  <strong className="text-stitch-primary">DEMO2026</strong> after
-                  running seed migration 009.
+                  No active tasks yet. Join a classroom below with your
+                  instructor&apos;s invite code.
                 </p>
               ) : (
                 activeTasks.map((task) => (
@@ -241,15 +241,8 @@ export function StudentDashboardView({
           </div>
 
           <div className="flex flex-col gap-4 md:col-span-12">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-[#191b23]">My Classrooms</h3>
-              <Link
-                href={routes.join}
-                className="text-sm font-medium text-[#004ac6] hover:underline"
-              >
-                + Join with invite link
-              </Link>
-            </div>
+            <h3 className="text-lg font-semibold text-[#191b23]">My Classrooms</h3>
+            <JoinClassroomInline id="join-classroom" />
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {classrooms.length === 0 ? (
                 <p
@@ -258,11 +251,8 @@ export function StudentDashboardView({
                     stitch.cardShadow
                   )}
                 >
-                  You are not enrolled yet.{" "}
-                  <Link href={routes.join} className="font-medium text-stitch-primary hover:underline">
-                    Join a classroom
-                  </Link>{" "}
-                  with code <strong>DEMO2026</strong>.
+                  You are not enrolled yet. Enter an invite code in the form
+                  above to join your first class.
                 </p>
               ) : (
                 classrooms.map((classroom) => (
