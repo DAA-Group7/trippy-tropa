@@ -177,8 +177,8 @@ Legend: **Status** = `missing` | `partial` | `stub`
 | ID | Feature | Status | Evidence | Required behavior | Acceptance criteria |
 |----|---------|--------|----------|-------------------|---------------------|
 | GAP-A-001 | Greedy assignment documentation | full | [`docs/algorithms/greedy-assignment.md`](../../docs/algorithms/greedy-assignment.md), [`auto-assign-help-guide.tsx`](../../src/components/officer/auto-assign-help-guide.tsx), [`officer/docs/auto-assign`](../../src/app/officer/docs/auto-assign/page.tsx) | Plain-language guide: prerequisites, steps, skill fit, limitations, speed; linked from task management | Officers can read how auto-assign works before running it |
-| GAP-A-002 | Hungarian algorithm implementation | missing | [`.cursor/notes.txt`](../../.cursor/notes.txt) | Optimal bipartite matching student×task by cost matrix | Officer selects “Hungarian” strategy; completes in reasonable time |
-| GAP-A-003 | Hungarian documentation | missing | — | `docs/algorithms/hungarian-assignment.md` | Explains when to use vs greedy |
+| GAP-A-002 | Hungarian algorithm implementation | full | [`hungarian.ts`](../../src/lib/algorithms/hungarian.ts), [`hungarian-assigner.ts`](../../src/lib/algorithms/hungarian-assigner.ts) | Repeated Hungarian rounds per group; cost from skill fit + hour budget | Auto-assign uses optimal bipartite matching per round |
+| GAP-A-003 | Hungarian documentation | full | [`greedy-assignment.md`](../../docs/algorithms/greedy-assignment.md) (updated) | Plain-language guide for instructors | Linked from officer tasks UI |
 | GAP-A-004 | Group balancing + **leader** assignment | partial | [`group-generation-view.tsx`](../../src/components/officer/group-generation-view.tsx), [`group-balancer.ts`](../../src/lib/algorithms/group-balancer.ts) | **Officer:** auto-balance members into groups; auto-pick leader (leadership score) or **manual override** before publish | Published groups have one leader each; manual leader change persists |
 
 **Dependencies:** Phase 3. Requires student time estimates (GAP-F-014) for meaningful cost matrix.

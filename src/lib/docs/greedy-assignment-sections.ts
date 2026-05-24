@@ -13,7 +13,7 @@ export const GREEDY_ASSIGNMENT_SECTIONS: DocSection[] = [
     id: "summary",
     title: "In one sentence",
     paragraphs: [
-      "For each task, Trippy-Tropa picks the group member who fits the required skills best among students who still have enough time budget left, using the hours they entered in the time estimate matrix.",
+      "For each group, Trippy-Tropa uses the Hungarian algorithm to find the best overall pairing of tasks and members (who still have time budget), based on skill fit and hours from the time estimate matrix.",
     ],
   },
   {
@@ -57,18 +57,16 @@ export const GREEDY_ASSIGNMENT_SECTIONS: DocSection[] = [
   },
   {
     id: "steps",
-    title: "How it chooses assignees",
+    title: "How matching works",
     paragraphs: [
-      "Auto-assign runs separately for each group. Inside a group it works like this:",
+      "Auto-assign runs separately for each group. The Hungarian algorithm runs in rounds:",
     ],
     bullets: [
-      "List tasks to assign (only unassigned tasks, unless you use Reassign all).",
-      "Handle tasks one at a time, in order.",
-      "For each task, consider members who entered hours for that task and still have enough budget left.",
-      "Score each eligible member by skill fit (match %).",
-      "Assign the task to the highest score.",
-      "Subtract that task's hours from the student's remaining budget.",
-      "Continue with the next task.",
+      "List tasks still waiting for an assignee.",
+      "Score every valid task–member pair (skill fit + enough hours left).",
+      "Find the pairing that maximizes overall fit for this round (Hungarian minimum-cost matching).",
+      "Assign those tasks, subtract hours from each student's budget.",
+      "Repeat with remaining tasks until no more valid pairings.",
     ],
   },
   {
@@ -100,8 +98,7 @@ export const GREEDY_ASSIGNMENT_SECTIONS: DocSection[] = [
     id: "limitations",
     title: "Limitations to know",
     bullets: [
-      "Not guaranteed to be the best possible plan for the whole group — early picks affect later ones.",
-      "Task processing order can change the outcome.",
+      "Each round optimizes that batch; later rounds see fewer tasks and tighter hour budgets.",
       "No time estimate for a task means it cannot be auto-assigned.",
       "The 40-hour cap is a simple planning limit, not a real calendar.",
       "Skill ratings are self-reported summaries.",
@@ -112,8 +109,8 @@ export const GREEDY_ASSIGNMENT_SECTIONS: DocSection[] = [
     id: "speed",
     title: "How fast is it?",
     paragraphs: [
-      "For typical classes (dozens of students and tasks per group), auto-assign finishes in under a second per group on the server.",
-      "The approach checks each student for each task — fast enough for normal classroom sizes.",
+      "For typical classes (dozens of students and tasks per group), auto-assign still finishes in under a second per group on the server.",
+      "Each round uses the Hungarian method — fast enough for normal classroom sizes.",
     ],
   },
   {

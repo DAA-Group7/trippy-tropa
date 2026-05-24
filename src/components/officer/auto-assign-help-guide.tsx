@@ -89,7 +89,7 @@ export function AutoAssignHelpGuide({
             How auto-assign works
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-[#505f76]">
-            A plain-language explanation of the greedy matcher used when you
+            A plain-language explanation of the Hungarian matcher used when you
             click Auto assign or Reassign all on the task management screen.
           </p>
         </header>
