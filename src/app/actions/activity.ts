@@ -23,6 +23,12 @@ export type ClassroomActivityItem = {
 
 const ACTIVITY_FEED_LIMIT = 20;
 
+/** Supabase may return a many-to-one embed as an object or a single-element array. */
+function firstJoinRow<T>(value: T | T[] | null | undefined): T | null {
+  if (value == null) return null;
+  return Array.isArray(value) ? (value[0] ?? null) : value;
+}
+
 export async function getOfficerActivityFeed(): Promise<ClassroomActivityItem[]> {
   const supabase = await createClient();
 
@@ -54,8 +60,8 @@ export async function getOfficerActivityFeed(): Promise<ClassroomActivityItem[]>
 
   return data.map((row) => {
     const payload = (row.payload ?? {}) as Record<string, unknown>;
-    const classroom = row.classrooms as { name: string } | null;
-    const profile = row.profiles as {
+    const classroom = firstJoinRow(row.classrooms) as { name: string } | null;
+    const profile = firstJoinRow(row.profiles) as {
       full_name: string | null;
       email: string;
     } | null;
