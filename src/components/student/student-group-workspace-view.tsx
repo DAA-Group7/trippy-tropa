@@ -1,10 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Crown, Users } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ArrowLeft, ClipboardList, Users } from "lucide-react";
 import type { StudentGroupWorkspaceData } from "@/app/actions/groups";
 import type { GroupMessageItem } from "@/app/actions/messages";
+import type { KanbanTaskData } from "@/app/actions/tasks";
 import { GroupChatPanel } from "@/components/chat/group-chat-panel";
+import { GroupWorkspaceBoardPanel } from "@/components/student/group-workspace-board-panel";
+import { GroupWorkspaceFilesPanel } from "@/components/student/group-workspace-files-panel";
+import { GroupWorkspaceMembersPanel } from "@/components/student/group-workspace-members-panel";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  parseGroupWorkspaceTab,
+  studentGroupWorkspacePath,
+  type GroupWorkspaceTab,
+} from "@/lib/constants/group-workspace";
 import { stitch } from "@/lib/design/stitch";
 import { routes } from "@/lib/constants/routes";
 import { cn } from "@/lib/utils";
@@ -12,6 +23,7 @@ import { cn } from "@/lib/utils";
 interface StudentGroupWorkspaceViewProps {
   data: StudentGroupWorkspaceData;
   initialMessages: GroupMessageItem[];
+  kanbanTasks: KanbanTaskData[];
 }
 
 function formatStatus(status: string): string {
@@ -23,8 +35,17 @@ function formatStatus(status: string): string {
 export function StudentGroupWorkspaceView({
   data,
   initialMessages,
+  kanbanTasks,
 }: StudentGroupWorkspaceViewProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const activeTab = parseGroupWorkspaceTab(searchParams.get("tab"));
   const { group, taskStats } = data;
+
+  const setTab = (tab: GroupWorkspaceTab) => {
+    const href = studentGroupWorkspacePath(data.classroomId, tab);
+    router.replace(href, { scroll: false });
+  };
 
   return (
     <div className="mx-auto w-full max-w-[1280px] flex-1 space-y-6 p-4 md:p-8">
@@ -77,17 +98,13 @@ export function StudentGroupWorkspaceView({
                   {formatStatus(group.progressStatus)}
                 </p>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <Link href={routes.student.tasks(data.classroomId)} className={stitch.btnPrimary}>
-                  Task board
-                </Link>
-                <Link
-                  href={routes.student.assignments(data.classroomId)}
-                  className={stitch.btnSecondary}
-                >
-                  Assignments
-                </Link>
-              </div>
+              <Link
+                href={routes.student.assignments(data.classroomId)}
+                className={cn(stitch.btnSecondary, "inline-flex items-center gap-2")}
+              >
+                <ClipboardList className="size-4" aria-hidden />
+                Assignment details
+              </Link>
             </div>
             <div className="mt-4">
               <div className="mb-1 flex justify-between text-xs font-semibold text-stitch-text-secondary">
@@ -119,67 +136,78 @@ export function StudentGroupWorkspaceView({
             </div>
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-3">
-            <div
-              className={cn(stitch.card, "p-6 lg:col-span-1", stitch.cardShadow)}
+          <Tabs
+            value={activeTab}
+            onValueChange={(value) =>
+              setTab(parseGroupWorkspaceTab(value as string))
+            }
+            className="gap-4"
+          >
+            <TabsList
+              variant="line"
+              className="h-auto w-full justify-start gap-0 rounded-none border-b border-stitch-border bg-transparent p-0"
             >
-              <h3 className="mb-1 text-lg font-semibold text-stitch-text">
+              <TabsTrigger
+                value="board"
+                className="rounded-none px-4 py-2.5 after:bottom-0 data-active:font-semibold"
+              >
+                Board
+              </TabsTrigger>
+              <TabsTrigger
+                value="members"
+                className="rounded-none px-4 py-2.5 after:bottom-0 data-active:font-semibold"
+              >
                 Members
-              </h3>
-              <p className="mb-4 text-sm text-stitch-text-secondary">
-                Group leader is highlighted
-              </p>
-              <ul className="space-y-2">
-                {group.members.map((member) => (
-                  <li
-                    key={member.id}
-                    className={cn(
-                      "flex items-center justify-between rounded-lg px-3 py-2.5",
-                      member.isLeader
-                        ? "border border-stitch-primary/20 bg-stitch-accent-soft"
-                        : "bg-stitch-accent-soft"
-                    )}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="flex size-9 items-center justify-center rounded-full bg-stitch-accent-muted text-xs font-semibold text-stitch-nav-active">
-                        {member.initials}
-                      </span>
-                      <div>
-                        <p className="text-sm font-medium text-stitch-text">
-                          {member.name}
-                          {member.isLeader && (
-                            <span className="ml-1 text-xs text-stitch-primary">
-                              (Leader)
-                            </span>
-                          )}
-                        </p>
-                        {member.averageSkill !== null && (
-                          <p className="text-xs text-stitch-text-muted">
-                            Skills {member.averageSkill} / 5
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    {member.isLeader && (
-                      <Crown
-                        className="size-4 shrink-0 text-stitch-primary"
-                        aria-label="Group leader"
-                      />
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
+              </TabsTrigger>
+              <TabsTrigger
+                value="chat"
+                className="rounded-none px-4 py-2.5 after:bottom-0 data-active:font-semibold"
+              >
+                Chat
+              </TabsTrigger>
+              <TabsTrigger
+                value="files"
+                className="rounded-none px-4 py-2.5 after:bottom-0 data-active:font-semibold"
+              >
+                Files
+              </TabsTrigger>
+            </TabsList>
 
-            <div
-              className={cn(stitch.card, "p-6 lg:col-span-2", stitch.cardShadow)}
-            >
-              <GroupChatPanel
-                groupId={group.id}
-                initialMessages={initialMessages}
-              />
-            </div>
-          </div>
+            <TabsContent value="board" className="mt-0 outline-none">
+              <div className={cn(stitch.card, "p-4 sm:p-6", stitch.cardShadow)}>
+                <GroupWorkspaceBoardPanel
+                  groupId={group.id}
+                  tasks={kanbanTasks}
+                  groupName={group.name}
+                />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="members" className="mt-0 outline-none">
+              <div className={cn(stitch.card, "p-6", stitch.cardShadow)}>
+                <GroupWorkspaceMembersPanel group={group} />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="chat" className="mt-0 outline-none">
+              <div
+                className={cn(
+                  stitch.card,
+                  "min-h-[min(520px,70vh)] p-4 sm:p-6",
+                  stitch.cardShadow
+                )}
+              >
+                <GroupChatPanel
+                  groupId={group.id}
+                  initialMessages={initialMessages}
+                />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="files" className="mt-0 outline-none">
+              <GroupWorkspaceFilesPanel />
+            </TabsContent>
+          </Tabs>
         </>
       )}
     </div>

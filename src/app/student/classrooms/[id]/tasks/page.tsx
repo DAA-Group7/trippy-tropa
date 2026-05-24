@@ -1,36 +1,14 @@
-import { notFound, redirect } from "next/navigation";
-import { getStudentKanbanTasks } from "@/app/actions/tasks";
-import { getSessionUser } from "@/lib/auth/session";
-import { routes } from "@/lib/constants/routes";
-import { StudentKanbanView } from "@/components/student/student-kanban-view";
+import { redirect } from "next/navigation";
+import { studentGroupWorkspacePath } from "@/lib/constants/group-workspace";
 
 export const metadata = { title: "Task board" };
 
+/** Legacy route — Kanban lives on the group workspace Board tab. */
 export default async function StudentTasksPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const { user, profile } = await getSessionUser();
-
-  if (!user || profile?.role !== "student") {
-    redirect(routes.login);
-  }
-
-  const data = await getStudentKanbanTasks(id);
-
-  if (!data) {
-    notFound();
-  }
-
-  return (
-    <StudentKanbanView
-      classroomId={id}
-      classroomName={data.classroomName}
-      groupName={data.groupName}
-      groupId={data.groupId}
-      tasks={data.tasks}
-    />
-  );
+  redirect(studentGroupWorkspacePath(id, "board"));
 }

@@ -21,6 +21,7 @@ export const routes = {
   student: {
     dashboard: "/student/dashboard",
     group: (classroomId: string) => `/student/classrooms/${classroomId}/group`,
+    /** @deprecated Use group workspace Board tab via `studentGroupWorkspacePath` */
     tasks: (classroomId: string) => `/student/classrooms/${classroomId}/tasks`,
     assignments: (classroomId: string) =>
       `/student/classrooms/${classroomId}/assignments`,

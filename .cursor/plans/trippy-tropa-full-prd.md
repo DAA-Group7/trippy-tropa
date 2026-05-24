@@ -95,7 +95,7 @@ Legend: **Status** = `missing` | `partial` | `stub`
 | GAP-F-008 | 4 Dashboard | Student join from dashboard | full | [`join-classroom-inline.tsx`](../../src/components/student/join-classroom-inline.tsx), [`student-dashboard-view.tsx`](../../src/components/student/student-dashboard-view.tsx) | Invite code field → enroll | Student joins new class from dashboard |
 | GAP-F-010 | 4 Dashboard | Student search / schedule | full | [`student-dashboard-view.tsx`](../../src/components/student/student-dashboard-view.tsx) | Search/schedule stubs removed until implemented | No misleading enabled controls |
 | GAP-F-011 | 5 Classroom detail | Interactive analytics charts | full | [`classroom-analytics-charts.tsx`](../../src/components/officer/classroom-analytics-charts.tsx), [`classroom-analytics.ts`](../../src/lib/officer/classroom-analytics.ts) | Recharts bar (skills) + line (enrollment trend) | At least 2 chart types on detail page |
-| GAP-F-012 | 6 Workspace | Unified tabbed workspace | partial | Group hub + separate [`tasks/page`](../../src/app/student/classrooms/[id]/tasks/page.tsx) | Single route: **Board \| Members \| Chat \| Files** | No extra navigation to reach Kanban |
+| GAP-F-012 | 6 Workspace | Unified tabbed workspace | full | [`student-group-workspace-view.tsx`](../../src/components/student/student-group-workspace-view.tsx), [`group-workspace.ts`](../../src/lib/constants/group-workspace.ts) | Single route: **Board \| Members \| Chat \| Files** | No extra navigation to reach Kanban |
 | GAP-F-013 | 6 Workspace | File upload / shared files | missing | No Storage in `src/` | Upload, list, download per group; Supabase Storage + RLS | Member uploads PDF; peers can download |
 | GAP-F-014 | 7 Assignment | Student time estimate matrix | missing | Officer sets `estimated_hours` on task only | Table: rows = students, cols = tasks; each cell = hours estimate | All group members submit before “Generate” enabled |
 | GAP-F-015 | 7 Assignment | Matrix / heatmap visualization | missing | [`officer-tasks-view.tsx`](../../src/components/officer/officer-tasks-view.tsx) table only | Grid colored by assignee + match score | Officer sees student × task grid after optimize |
@@ -146,7 +146,7 @@ Legend: **Status** = `missing` | `partial` | `stub`
 | 3 Onboarding | Custom metrics per class | — | 3-step 1–5 assessment |
 | 4 Dashboard | — | Officer + student dashboard P1 gaps (F-006–F-008, F-010) | Officer cards; student live data |
 | 5 Classroom detail | Charts | Skill bars, roster | Roster, invite, group links |
-| 6 Workspace | Files, unified tabs | Kanban separate route | Members, chat, progress |
+| 6 Workspace | Files upload | Unified tabs (F-012); board, members, chat | Progress card |
 | 7 Assignment | Estimates matrix, heatmap, override | Greedy assign, results table | Task CRUD, auto-assign |
 | 8 Teacher dashboard | Participation, override UI | Aggregate stats | Classroom grid |
 | 9 Mobile | Tab routing | Kanban responsive | Bottom nav shells |
@@ -261,14 +261,14 @@ flowchart LR
 
 | Component | Target | Current | Route / component |
 |-----------|--------|---------|-------------------|
-| Kanban | 4 columns, DnD | Full (separate route) | [`kanban-board.tsx`](../../src/components/tasks/kanban-board.tsx), `/tasks` |
-| Members sidebar | Leader highlight | Full | [`student-group-workspace-view.tsx`](../../src/components/student/student-group-workspace-view.tsx) |
-| Chat | Realtime messages | Full | [`group-chat-panel.tsx`](../../src/components/chat/group-chat-panel.tsx), migration 008 |
+| Kanban | 4 columns, DnD | Full — Board tab | [`kanban-board.tsx`](../../src/components/tasks/kanban-board.tsx), group `?tab=board` |
+| Members | Leader highlight | Full — Members tab | [`group-workspace-members-panel.tsx`](../../src/components/student/group-workspace-members-panel.tsx) |
+| Chat | Realtime messages | Full — Chat tab | [`group-chat-panel.tsx`](../../src/components/chat/group-chat-panel.tsx) |
 | File upload | Shared files | Missing | GAP-F-013 |
 | Progress card | % complete | Full | Group workspace progress bar |
-| Unified layout | Single screen tabs | Partial | GAP-F-012 |
+| Unified layout | Single screen tabs | Full | Board · Members · Chat · Files |
 
-**Gaps:** GAP-F-012, GAP-F-013
+**Gaps:** GAP-F-013
 
 ---
 
@@ -425,7 +425,7 @@ created_at timestamptz
 
 **In scope**
 
-- Workspace layout: tabs `Board | Members | Chat | Files` (GAP-F-012)
+- Workspace layout — done (GAP-F-012): tabs `Board | Members | Chat | Files`
 - Supabase Storage bucket `group-files` + table `group_files` (GAP-F-013)
 - Upload, list, download UI; RLS by `group_members`
 - Embed or route Kanban inside Board tab
@@ -737,7 +737,7 @@ Use this appendix to avoid re-building shipped features.
 |--------|-------|
 | GAP-S-001 – GAP-S-009 | 0 |
 | GAP-F-001 – F-008, F-010, F-021, F-022 | 1 |
-| GAP-F-012, F-013 | 2 |
+| GAP-F-013 | 2 |
 | GAP-F-014 – F-017, GAP-A-001 – A-004 | 3 |
 | GAP-F-007, F-011, F-018, F-019, F-020 | 4 |
 | GAP-F-023, GAP-P-001 – P-005 | 5 |
