@@ -87,7 +87,7 @@ Legend: **Status** = `missing` | `partial` | `stub`
 | ID | PRD screen | Feature | Status | Evidence | Required behavior | Acceptance criteria |
 |----|------------|---------|--------|----------|-------------------|---------------------|
 | GAP-F-001 | 1 Landing | Hero + dual CTA above fold | full | [`src/app/page.tsx`](../../src/app/page.tsx) | Primary: **Join classroom** → `/join`; Secondary: **Create classroom** → `/officer/classrooms/new` | Both CTAs visible without scrolling on mobile |
-| GAP-F-002 | 1 Landing | Features section (3–4 pillars) | partial | Home page has 2 role cards | Dedicated features grid: group formation, task assignment, collaboration | Icons + copy match PRD positioning |
+| GAP-F-002 | 1 Landing | Features section (3–4 pillars) | full | [`src/app/page.tsx`](../../src/app/page.tsx) | Dedicated features grid: group formation, task assignment, collaboration, progress | Icons + copy match PRD positioning |
 | GAP-F-003 | 2 Auth | Password reset | stub | [`auth-card.tsx`](../../src/components/auth/auth-card.tsx) | Supabase reset email flow | User receives reset link and can set new password |
 | GAP-F-004 | 2 Auth | SSO placeholder | stub | Auth card “University Portal” toast | Implement OIDC or remove until ready | No dead-end button in production |
 | GAP-F-005 | 2 Auth | Preserve invite `code` in middleware | partial | [`src/lib/supabase/middleware.ts`](../../src/lib/supabase/middleware.ts) | Redirects from `/login` keep `?code=` and `redirect` | Register from invite resumes join after auth |
@@ -143,7 +143,7 @@ Legend: **Status** = `missing` | `partial` | `stub`
 
 | Screen | Missing | Partial | Full |
 |--------|---------|---------|------|
-| 1 Landing | Dual hero CTA, features grid | Hero dual CTA done (GAP-F-001) | Page exists |
+| 1 Landing | — | Screen 1 complete (GAP-F-001, F-002) | Page exists |
 | 2 Auth | Password reset, SSO | Invite banner, register server action | Login, register, invite join |
 | 3 Onboarding | Custom metrics per class | — | 3-step 1–5 assessment |
 | 4 Dashboard | Activity feed, create modal | Student avatar, search stub | Officer cards; student live data |
@@ -187,11 +187,11 @@ flowchart LR
 | Component | Target | Current | Route / component |
 |-----------|--------|---------|-------------------|
 | Hero | Value prop + dual CTA | Full | [`src/app/page.tsx`](../../src/app/page.tsx) — Join + Create above fold |
-| Features | 3–4 feature blocks | Partial — 2 role cards below | Same |
+| Features | 3–4 feature blocks | Full — 4 pillar grid | Same |
 | CTA Create | Officer path | Full | `routes.officer.createClassroom` |
 | CTA Join | Student join | Full | `routes.join` |
 
-**Gaps:** GAP-F-002
+**Gaps:** — (Screen 1 complete)
 
 ---
 
@@ -371,7 +371,7 @@ flowchart LR
 
 **In scope**
 
-- Landing: features section (GAP-F-002) — dual hero CTA done (GAP-F-001)
+- Landing: complete (GAP-F-001, F-002)
 - Middleware: preserve `code` / `redirect` on auth redirects (GAP-F-005)
 - Student dashboard: join code input, real avatar/initials (GAP-F-008, F-009)
 - Remove or hide search/schedule stubs (GAP-F-010)

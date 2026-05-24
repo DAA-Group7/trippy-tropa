@@ -1,4 +1,14 @@
-import { DoorOpen, LayoutDashboard, Plus, Users } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import {
+  BarChart3,
+  DoorOpen,
+  LayoutDashboard,
+  ListChecks,
+  MessageSquare,
+  Plus,
+  Users,
+  UsersRound,
+} from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
 import {
   Card,
@@ -10,6 +20,37 @@ import {
 import { BrandMark } from "@/components/brand/brand-mark";
 import { APP_TAGLINE } from "@/lib/constants/brand";
 import { routes } from "@/lib/constants/routes";
+
+const LANDING_FEATURES: {
+  title: string;
+  description: string;
+  icon: LucideIcon;
+}[] = [
+  {
+    title: "Intelligent group formation",
+    description:
+      "Balance teams by skill so every group is ready to contribute from day one.",
+    icon: UsersRound,
+  },
+  {
+    title: "Skill-matched task assignment",
+    description:
+      "Assign work fairly with requirements that reflect each student’s strengths.",
+    icon: ListChecks,
+  },
+  {
+    title: "Real-time collaboration",
+    description:
+      "Chat, Kanban boards, and notifications keep groups aligned without extra apps.",
+    icon: MessageSquare,
+  },
+  {
+    title: "Classroom progress at a glance",
+    description:
+      "Officers monitor enrollment, groups, and task flow from one dashboard.",
+    icon: BarChart3,
+  },
+];
 
 export default function HomePage() {
   return (
@@ -60,6 +101,44 @@ export default function HomePage() {
             Students join with an invite link. Teachers sign in to set up a
             class.
           </p>
+        </section>
+
+        <section
+          className="mt-12 w-full sm:mt-16"
+          aria-labelledby="landing-features-heading"
+        >
+          <div className="text-center">
+            <h2
+              id="landing-features-heading"
+              className="font-heading text-xl font-semibold text-[#191b23] sm:text-2xl"
+            >
+              Built for structured group work
+            </h2>
+            <p className="mx-auto mt-2 max-w-2xl text-sm text-[#434655] sm:text-base">
+              From balanced teams to fair assignments and shared workspaces—
+              everything instructors and students need in one place.
+            </p>
+          </div>
+          <ul className="mt-8 grid list-none gap-4 p-0 sm:grid-cols-2 lg:grid-cols-4">
+            {LANDING_FEATURES.map((feature) => {
+              const Icon = feature.icon;
+              return (
+                <li key={feature.title}>
+                  <article className="flex h-full flex-col rounded-xl border border-[#c3c6d7] bg-white p-5 text-left shadow-sm">
+                    <div className="flex size-10 items-center justify-center rounded-lg bg-[#dbe1ff] text-[#004ac6]">
+                      <Icon className="size-5" aria-hidden />
+                    </div>
+                    <h3 className="mt-4 font-heading text-base font-semibold text-[#191b23]">
+                      {feature.title}
+                    </h3>
+                    <p className="mt-2 flex-1 text-sm leading-relaxed text-[#434655]">
+                      {feature.description}
+                    </p>
+                  </article>
+                </li>
+              );
+            })}
+          </ul>
         </section>
 
         <section
