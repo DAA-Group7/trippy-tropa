@@ -12,6 +12,7 @@ export const routes = {
   onboarding: "/onboarding/skills",
   officer: {
     dashboard: "/officer/dashboard",
+    autoAssignHelp: "/officer/docs/auto-assign",
     createClassroom: "/officer/classrooms/new",
     classroom: (id: string) => `/officer/classrooms/${id}`,
     generateGroups: (id: string) => `/officer/classrooms/${id}/groups/generate`,

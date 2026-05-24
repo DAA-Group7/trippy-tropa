@@ -50,6 +50,9 @@ export function computeTaskMatchScore(
 /**
  * Greedy assignment by highest skill match within available hours.
  * Hours per (student, task) come from the group time estimate matrix.
+ *
+ * Instructor-facing guide: docs/algorithms/greedy-assignment.md
+ * In-app: routes.officer.autoAssignHelp
  */
 export function assignTasksOptimally(
   tasks: TaskToAssign[],

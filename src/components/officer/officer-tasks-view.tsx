@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { ArrowLeft, Plus, Trash2, Wand2 } from "lucide-react";
+import { ArrowLeft, CircleHelp, Plus, Trash2, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   autoAssignTasks,
@@ -167,6 +167,13 @@ export function OfficerTasksView({ context }: OfficerTasksViewProps) {
               Create project tasks per group. Auto-assign fills only unassigned
               tasks by default; use reassign all to reshuffle.
             </p>
+            <Link
+              href={routes.officer.autoAssignHelp}
+              className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-[#004ac6] hover:underline"
+            >
+              <CircleHelp className="size-4" aria-hidden />
+              How auto-assign works
+            </Link>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
@@ -258,7 +265,13 @@ export function OfficerTasksView({ context }: OfficerTasksViewProps) {
                 {!context.estimateStatus.isComplete && (
                   <p className="mt-1 text-xs opacity-90">
                     Each group member must enter hours for every task in their
-                    group before auto-assign runs.
+                    group before auto-assign runs.{" "}
+                    <Link
+                      href={routes.officer.autoAssignHelp}
+                      className="font-medium underline hover:no-underline"
+                    >
+                      Learn how matching works
+                    </Link>
                   </p>
                 )}
               </div>

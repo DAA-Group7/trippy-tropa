@@ -176,7 +176,7 @@ Legend: **Status** = `missing` | `partial` | `stub`
 
 | ID | Feature | Status | Evidence | Required behavior | Acceptance criteria |
 |----|---------|--------|----------|-------------------|---------------------|
-| GAP-A-001 | Greedy assignment documentation | missing | [`task-assigner.ts`](../../src/lib/algorithms/task-assigner.ts) | `docs/algorithms/greedy-assignment.md` with complexity, inputs, limitations | Linked from officer tasks UI |
+| GAP-A-001 | Greedy assignment documentation | full | [`docs/algorithms/greedy-assignment.md`](../../docs/algorithms/greedy-assignment.md), [`auto-assign-help-guide.tsx`](../../src/components/officer/auto-assign-help-guide.tsx), [`officer/docs/auto-assign`](../../src/app/officer/docs/auto-assign/page.tsx) | Plain-language guide: prerequisites, steps, skill fit, limitations, speed; linked from task management | Officers can read how auto-assign works before running it |
 | GAP-A-002 | Hungarian algorithm implementation | missing | [`.cursor/notes.txt`](../../.cursor/notes.txt) | Optimal bipartite matching student×task by cost matrix | Officer selects “Hungarian” strategy; completes in reasonable time |
 | GAP-A-003 | Hungarian documentation | missing | — | `docs/algorithms/hungarian-assignment.md` | Explains when to use vs greedy |
 | GAP-A-004 | Group balancing + **leader** assignment | partial | [`group-generation-view.tsx`](../../src/components/officer/group-generation-view.tsx), [`group-balancer.ts`](../../src/lib/algorithms/group-balancer.ts) | **Officer:** auto-balance members into groups; auto-pick leader (leadership score) or **manual override** before publish | Published groups have one leader each; manual leader change persists |
@@ -346,7 +346,7 @@ flowchart LR
 | Student view | Read assignments | Full | [`student-assignments-view.tsx`](../../src/components/student/student-assignments-view.tsx) |
 | Task override | Officer manual reassign | Full | GAP-F-016 — not group-leader scope |
 
-**Gaps:** GAP-A-001–004 (algorithms). Group leader pick remains **Flow A** (Screen 5 / GAP-A-004).
+**Gaps:** GAP-A-002–004 (algorithms). Greedy docs done (GAP-A-001). Group leader pick remains **Flow A** (Screen 5 / GAP-A-004).
 
 ---
 
@@ -512,7 +512,7 @@ created_at timestamptz
 
 - `task_time_estimates` + student UI — done (GAP-F-014)
 - Officer matrix / heatmap after assign — done (GAP-F-015)
-- Greedy docs: `docs/algorithms/greedy-assignment.md` (GAP-A-001)
+- Greedy docs: `docs/algorithms/greedy-assignment.md` — done (GAP-A-001)
 - Hungarian implementation + toggle in officer tasks (GAP-A-002, A-003)
 - Manual override + `assignment_audit` log — done (GAP-F-016); cross-classroom student reassignment — **removed** (GAP-F-019)
 - Auto-assign: unassigned-only default — done (GAP-F-017)
@@ -776,7 +776,8 @@ Use this appendix to avoid re-building shipped features.
 | GAP-F-015 | 3 (done) |
 | GAP-F-016 | 3 (done) |
 | GAP-F-017 | 3 (done) |
-| GAP-A-001 – A-004 | 3 |
+| GAP-A-001 | 3 (done) |
+| GAP-A-002 – A-004 | 3 |
 | GAP-F-018 | 4 (done) |
 | GAP-F-007, F-011, F-020 | 4 (done) |
 | GAP-F-019 | — (removed) |
