@@ -164,7 +164,7 @@ Legend: **Status** = `missing` | `partial` | `stub`
 | GAP-F-018 | 8 Teacher | Participation metrics | full | [`participation.ts`](../../src/app/actions/participation.ts), [`participation-dashboard.tsx`](../../src/components/officer/participation-dashboard.tsx), [`013_tasks_updated_at.sql`](../../supabase/migrations/013_tasks_updated_at.sql) | Per-student: last active, tasks moved, messages sent, assessment status | Officer identifies at-risk students |
 | GAP-F-019 | 8 Teacher | Cross-classroom student reassignment | **removed** | — | Officers **invite only**; no bulk reassign of students between classrooms | N/A |
 | GAP-F-020 | 3 Onboarding | Officer-customizable skills + multipliers | full | [`014_classroom_skill_templates.sql`](../../supabase/migrations/014_classroom_skill_templates.sql), [`classroom-skills.ts`](../../src/app/actions/classroom-skills.ts), [`classroom-skill-templates-editor.tsx`](../../src/components/officer/classroom-skill-templates-editor.tsx), [`skill-assessment-view.tsx`](../../src/components/onboarding/skill-assessment-view.tsx) | Officer defines per-class metrics (label, description, 1–5, **multiplier**); students self-assess on join; weighted scores drive group balance | Dynamic onboarding per classroom; officer editor on classroom detail |
-| GAP-F-021 | 9 Mobile | Tasks tab routing | partial | [`student-shell.tsx`](../../src/components/layout/student-shell.tsx) `match: () => false` | Tasks tab → aggregate task list or last classroom board | Tab highlights correctly |
+| GAP-F-021 | 9 Mobile | Tasks tab routing | full | [`student/tasks/page.tsx`](../../src/app/student/tasks/page.tsx), [`student-tasks-view.tsx`](../../src/components/student/student-tasks-view.tsx), [`tasks-nav.ts`](../../src/lib/student/tasks-nav.ts) | Tasks tab → `/student/tasks` aggregate list; single-class students redirect to group board; tab active on board routes | Tab highlights on tasks hub and group workspace |
 | GAP-F-022 | 9 Mobile | Notifications tab routing | partial | Hash `#updates` on dashboard only | Dedicated `/student/notifications` or scroll to feed | Tab opens notification list |
 | GAP-F-023 | 9 Mobile | Responsive Kanban | partial | [`kanban-board.tsx`](../../src/components/tasks/kanban-board.tsx) | Horizontal scroll columns on `sm`; touch DnD | Usable on 375px width |
 
@@ -377,7 +377,7 @@ flowchart LR
 | Responsive cards | Stack on mobile | Full | Stitch responsive grids |
 | Responsive Kanban | Horizontal scroll | Partial | GAP-F-023 |
 
-**Gaps:** GAP-F-021, GAP-F-022, GAP-F-023
+**Gaps:** GAP-F-022, GAP-F-023
 
 ---
 
@@ -434,7 +434,7 @@ flowchart LR
 - Middleware invite params — done (GAP-F-005)
 - Student dashboard inline join — done (GAP-F-008)
 - Student search/schedule stubs removed (GAP-F-010)
-- Mobile: wire Tasks and Notifications tabs (GAP-F-021, F-022)
+- Mobile: Tasks tab routing — done (GAP-F-021); wire Notifications tab (GAP-F-022)
 - Officer activity feed — done (GAP-F-006)
 - Create classroom sheet — done (GAP-F-007)
 - Student dashboard inline join — done (GAP-F-008)
@@ -769,7 +769,8 @@ Use this appendix to avoid re-building shipped features.
 | Gap ID | Phase |
 |--------|-------|
 | GAP-S-001 – GAP-S-009 | 0 |
-| GAP-F-001 – F-008, F-010, F-021, F-022 | 1 |
+| GAP-F-001 – F-008, F-010, F-022 | 1 |
+| GAP-F-021 | 5 (done) |
 | GAP-F-013 | — (removed) |
 | GAP-F-014 | 3 (done) |
 | GAP-F-015 | 3 (done) |

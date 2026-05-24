@@ -20,6 +20,8 @@ export const routes = {
   },
   student: {
     dashboard: "/student/dashboard",
+    /** Aggregate assignments list (Tasks tab); single-class students redirect to board. */
+    tasksHub: "/student/tasks",
     group: (classroomId: string) => `/student/classrooms/${classroomId}/group`,
     /** @deprecated Use group workspace Board tab via `studentGroupWorkspacePath` */
     tasks: (classroomId: string) => `/student/classrooms/${classroomId}/tasks`,

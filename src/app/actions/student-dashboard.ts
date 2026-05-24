@@ -166,3 +166,141 @@ export async function getStudentDashboardOverview(): Promise<StudentDashboardOve
 
   return { classrooms: classroomCards, activeTasks };
 }
+
+export type StudentTaskHubItem = {
+  id: string;
+  title: string;
+  status: TaskStatus;
+  classroomId: string;
+  classroomName: string;
+  classroomLabel: string;
+  dueLabel: string;
+  urgent: boolean;
+};
+
+export type StudentTaskHubClassroom = {
+  id: string;
+  name: string;
+  hasGroup: boolean;
+  openTaskCount: number;
+};
+
+export type StudentTasksHubData = {
+  tasks: StudentTaskHubItem[];
+  classrooms: StudentTaskHubClassroom[];
+};
+
+export async function getStudentTasksHub(): Promise<StudentTasksHubData> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { tasks: [], classrooms: [] };
+  }
+
+  const { data: memberships } = await supabase
+    .from("classroom_members")
+    .select("classroom_id")
+    .eq("user_id", user.id);
+
+  const classroomIds = (memberships ?? []).map((m) => m.classroom_id as string);
+  if (classroomIds.length === 0) {
+    return { tasks: [], classrooms: [] };
+  }
+
+  const { data: classrooms } = await supabase
+    .from("classrooms")
+    .select("id, name, subject")
+    .in("id", classroomIds)
+    .order("name");
+
+  const { data: groups } = await supabase
+    .from("groups")
+    .select("id, classroom_id")
+    .in("classroom_id", classroomIds);
+
+  const groupIds = (groups ?? []).map((g) => g.id);
+  const groupToClassroom = new Map(
+    (groups ?? []).map((g) => [g.id, g.classroom_id as string])
+  );
+
+  const { data: myGroups } = groupIds.length
+    ? await supabase
+        .from("group_members")
+        .select("group_id")
+        .eq("user_id", user.id)
+        .in("group_id", groupIds)
+    : { data: [] };
+
+  const myGroupIds = new Set((myGroups ?? []).map((m) => m.group_id as string));
+
+  const { data: tasks } = groupIds.length
+    ? await supabase
+        .from("tasks")
+        .select("id, title, status, deadline, group_id, assigned_to")
+        .in("group_id", groupIds)
+    : { data: [] };
+
+  const openAssigned = (tasks ?? []).filter(
+    (t) =>
+      myGroupIds.has(t.group_id as string) &&
+      t.assigned_to === user.id &&
+      (t.status as TaskStatus) !== "done"
+  );
+
+  const hubTasks: StudentTaskHubItem[] = [...openAssigned]
+    .sort((a, b) => {
+      const aMs = a.deadline
+        ? new Date(a.deadline as string).getTime()
+        : Number.MAX_SAFE_INTEGER;
+      const bMs = b.deadline
+        ? new Date(b.deadline as string).getTime()
+        : Number.MAX_SAFE_INTEGER;
+      return aMs - bMs;
+    })
+    .map((t) => {
+      const classroomId = groupToClassroom.get(t.group_id as string)!;
+      const classroom = (classrooms ?? []).find((c) => c.id === classroomId);
+      const deadline = t.deadline ? new Date(t.deadline as string) : null;
+      const now = Date.now();
+      const urgent =
+        deadline !== null && deadline.getTime() - now < 48 * 60 * 60 * 1000;
+
+      return {
+        id: t.id,
+        title: t.title,
+        status: t.status as TaskStatus,
+        classroomId,
+        classroomName: classroom?.name ?? "Classroom",
+        classroomLabel: classroom?.subject ?? classroom?.name ?? "Classroom",
+        dueLabel: deadline
+          ? deadline.toLocaleDateString(undefined, {
+              month: "short",
+              day: "numeric",
+            })
+          : "No deadline",
+        urgent,
+      };
+    });
+
+  const hubClassrooms: StudentTaskHubClassroom[] = (classrooms ?? []).map((c) => {
+    const classroomGroupIds = (groups ?? [])
+      .filter((g) => g.classroom_id === c.id)
+      .map((g) => g.id);
+    const hasGroup = classroomGroupIds.some((gid) => myGroupIds.has(gid));
+    const openTaskCount = openAssigned.filter((t) =>
+      classroomGroupIds.includes(t.group_id as string)
+    ).length;
+
+    return {
+      id: c.id,
+      name: c.name,
+      hasGroup,
+      openTaskCount,
+    };
+  });
+
+  return { tasks: hubTasks, classrooms: hubClassrooms };
+}

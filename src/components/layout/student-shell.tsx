@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { BrandMark } from "@/components/brand/brand-mark";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { routes } from "@/lib/constants/routes";
+import { isStudentTasksNavActive } from "@/lib/student/tasks-nav";
 
 const navItems = [
   {
@@ -28,10 +29,10 @@ const navItems = [
       path === routes.join || path.startsWith("/join"),
   },
   {
-    href: routes.student.dashboard,
+    href: routes.student.tasksHub,
     label: "Tasks",
     icon: ClipboardList,
-    match: () => false,
+    match: isStudentTasksNavActive,
   },
   {
     href: `${routes.student.dashboard}#updates`,
