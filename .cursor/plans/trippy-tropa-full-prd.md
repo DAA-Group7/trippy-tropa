@@ -2,16 +2,18 @@
 
 **Product:** Trippy-Tropa (Smart Collaborative Group Management System)  
 **Version:** 1.0  
-**Last updated:** 2026-05-22  
+**Last updated:** 2026-05-23  
 **Status:** Living document — gaps first, then phased delivery
 
 ---
 
 ## 1. Executive summary
 
-Trippy-Tropa is a mobile-first, responsive web application for academic group work. Officers (teachers) create classrooms, generate skill-balanced groups, assign tasks intelligently, and monitor progress. Students join via invite links, complete skill assessments, collaborate in group workspaces, and execute tasks on Kanban boards.
+Trippy-Tropa is a mobile-first, responsive web application for academic group work. A **classroom Officer (teacher)** runs the class: creates the classroom, forms groups, defines project tasks, and runs classroom-wide assignment. **Group Leaders** and **Group Members** are both **students** in the app (`profiles.role = student`); leaders are designated per group and coordinate that group’s work. Students join via invite links, complete skill assessments, fill time-estimate matrices, collaborate in group workspaces, and execute tasks on Kanban boards.
 
-The codebase today delivers a **strong officer backend** (classrooms, groups, tasks, auto-assign) and **core student flows** (auth, onboarding, join, Kanban, group chat, notifications). The largest product gaps are **file sharing**, **assignment matrix visualization**, **student time estimates**, **teacher participation analytics**, **manual assignment override**, **customizable onboarding**, **Hungarian assignment algorithm**, and **production security hardening**.
+The codebase today delivers a **strong officer backend** (classrooms, groups, tasks, auto-assign) and **core student flows** (auth, onboarding, join, Kanban, group chat, notifications). Remaining gaps include **leader override UX polish**, **customizable onboarding**, **Hungarian assignment**, and **production security hardening**.
+
+> **Authority model (read first):** See [§2.5 Role hierarchy](#25-role-hierarchy-and-authority-model). Do not conflate **classroom Officer** powers with **group Leader** (student) responsibilities.
 
 This PRD leads with **missing and partial functionality**, maps them to the original nine-screen spec, and defines a **six-phase roadmap** (Phase 0–5) to close gaps.
 
@@ -28,12 +30,70 @@ This PRD leads with **missing and partial functionality**, maps them to the orig
 | Backend | Supabase (Auth, Postgres, Realtime, Storage planned) |
 | Design system | [`.interface-design/system.md`](../../.interface-design/system.md) |
 
-### 2.2 Personas
+### 2.2 Personas (summary)
 
-| Persona | Goals |
-|---------|--------|
-| **Officer / Teacher** | Create classes, invite students, balance groups, assign tasks, monitor participation, override when needed |
-| **Student** | Join class, self-assess skills, collaborate in group, complete tasks, see assignments |
+| Persona | App role | Scope | Primary goals |
+|---------|----------|-------|----------------|
+| **Teacher / Officer** | `profiles.role = officer` | Whole **classroom** | Create class, invite students, publish groups, set **group leaders**, create tasks, run **task** auto-assign / override, monitor all groups |
+| **Group Leader** | `student` + `groups.leader_id` | One **group** | Same as member, plus visible leader status; coordinates group (future: leader-only actions TBD) |
+| **Group Member** | `student` in `group_members` | One **group** | Self-assess skills, join workspace, fill **time estimate** matrix row, execute assigned Kanban tasks |
+
+Officers use `/officer/*` routes. Leaders and members share `/student/*` routes; leader is a **group attribute**, not a separate login role.
+
+### 2.5 Role hierarchy and authority model
+
+This is the canonical permission model for product and engineering decisions.
+
+```mermaid
+flowchart TB
+  subgraph classroom [Classroom scope — Officer only]
+    O[Teacher / Officer]
+    O --> CreateClass[Create classroom and tasks]
+    O --> FormGroups[Form groups and pick leaders]
+    O --> TaskAssign[Task auto-assign and override]
+    O --> Monitor[Monitor all groups]
+  end
+
+  subgraph group [Group scope — Students]
+    L[Group Leader — student]
+    M[Group Members — students]
+    L --- M
+    L --> EstMatrix[Fill own time estimates]
+    M --> EstMatrix
+    L --> Kanban[Work assigned tasks on board]
+    M --> Kanban
+    L --> Chat[Group chat]
+    M --> Chat
+  end
+
+  O --> FormGroups
+  FormGroups --> L
+  FormGroups --> M
+```
+
+| Level | Who | How identified | What they control today |
+|-------|-----|----------------|-------------------------|
+| **1 — Classroom Officer** | Teacher (or designated instructor) | `profiles.role = officer`, `classrooms.created_by` | Class roster, invite, **group generation & publish**, **group leader** selection (auto or manual), **task CRUD**, **task assignment** (auto-assign, reassign all, manual override), analytics, activity feed |
+| **2 — Group Leader** | Student | `groups.leader_id` + `group_members` | Same as member in workspace; UI highlights leader; **does not** create classroom tasks or run classroom auto-assign (unless future leader permissions are added) |
+| **3 — Group Member** | Student | `group_members` only | Onboarding skills, workspace (board, chat, estimates), Kanban for **tasks assigned to them** |
+
+**Two different “assignment” flows (do not merge):**
+
+| Flow | Actor | Input | Output |
+|------|--------|-------|--------|
+| **A — Group formation** | Officer | Enrolled students + skill ratings | Students placed in groups; **one leader per group** via skill balancer (default: highest leadership in group) or **officer manual override** (DnD / group management before publish) |
+| **B — Task assignment** | Officer | Group **tasks** (coding, slides, docs, …) + **member×task time estimate matrix** (every student, including leaders, submits their own hours) | Greedy/Hungarian assigns each **task** to one **member**; officer may **override** assignee; idempotent re-run leaves existing assignees unless “reassign all” |
+
+**Product implications (correcting earlier ambiguity):**
+
+- **Time estimates (GAP-F-014):** Filled by **all group members and leaders** (each person’s own row). Officers do **not** set per-task hour budgets.
+- **Task override (GAP-F-016):** **Officer-only** at classroom task level. Leaders do not reassign tasks in the current scope.
+- **Group leader override:** Part of **group formation (Flow A)**, not task assignment. Implemented via [`group-generation-view.tsx`](../../src/components/officer/group-generation-view.tsx) (auto leader + DnD). Document/enhance under GAP-A-004 / group management, not under task matrix features.
+
+**Future (out of current scope unless prioritized):**
+
+- Leader-scoped permissions (e.g. nudge estimates, propose task splits) — requires new gaps and RLS.
+- Student-as-officer in another classroom (same account, different `role` per product rules) — today one `role` per profile.
 
 ### 2.3 Route map
 
@@ -97,11 +157,11 @@ Legend: **Status** = `missing` | `partial` | `stub`
 | GAP-F-011 | 5 Classroom detail | Interactive analytics charts | full | [`classroom-analytics-charts.tsx`](../../src/components/officer/classroom-analytics-charts.tsx), [`classroom-analytics.ts`](../../src/lib/officer/classroom-analytics.ts) | Recharts bar (skills) + line (enrollment trend) | At least 2 chart types on detail page |
 | GAP-F-012 | 6 Workspace | Unified tabbed workspace | full | [`student-group-workspace-view.tsx`](../../src/components/student/student-group-workspace-view.tsx), [`group-workspace.ts`](../../src/lib/constants/group-workspace.ts) | Single route: **Board \| Members \| Chat \| Time estimates** | No extra navigation to reach Kanban |
 | GAP-F-013 | 6 Workspace | File upload / shared files | **removed** | Out of scope — students use Google Drive / Docs externally | N/A | N/A |
-| GAP-F-014 | 7 Assignment | Student time estimate matrix | full | [`011_task_time_estimates.sql`](../../supabase/migrations/011_task_time_estimates.sql), [`time-estimates.ts`](../../src/app/actions/time-estimates.ts), [`group-workspace-estimates-panel.tsx`](../../src/components/student/group-workspace-estimates-panel.tsx) | Rows = members, cols = group tasks; each cell = self-reported hours; officer does not set task time | All group members submit before auto-assign enabled |
+| GAP-F-014 | 7 Assignment | Student time estimate matrix | full | [`011_task_time_estimates.sql`](../../supabase/migrations/011_task_time_estimates.sql), [`time-estimates.ts`](../../src/app/actions/time-estimates.ts), [`group-workspace-estimates-panel.tsx`](../../src/components/student/group-workspace-estimates-panel.tsx) | Rows = **leaders + members**; cols = group tasks; each student self-reports hours for themselves; officer does not set task time | All group members (incl. leaders) submit before officer auto-assign |
 | GAP-F-015 | 7 Assignment | Matrix / heatmap visualization | full | [`assignment-matrix.tsx`](../../src/components/officer/assignment-matrix.tsx), [`assignment-matrix-data.ts`](../../src/lib/tasks/assignment-matrix-data.ts) | Grid colored by assignee + match score | Officer sees student × task grid after optimize |
-| GAP-F-016 | 7 Assignment | Manual assignment override | full | [`012_assignment_audit.sql`](../../supabase/migrations/012_assignment_audit.sql), [`task-assignment-override-dialog.tsx`](../../src/components/officer/task-assignment-override-dialog.tsx), `overrideTaskAssignment` in [`tasks.ts`](../../src/app/actions/tasks.ts) | Reassign task to another student; optional reason; audit log | Override persists; student notification sent |
+| GAP-F-016 | 7 Assignment | Manual **task** assignment override | full | [`012_assignment_audit.sql`](../../supabase/migrations/012_assignment_audit.sql), [`task-assignment-override-dialog.tsx`](../../src/components/officer/task-assignment-override-dialog.tsx), `overrideTaskAssignment` in [`tasks.ts`](../../src/app/actions/tasks.ts) | **Officer** reassigns a **task** to another group member; optional reason; audit log | Override persists; student notification sent |
 | GAP-F-017 | 7 Assignment | Idempotent auto-assign | full | [`autoAssignTasks`](../../src/app/actions/tasks.ts), [`officer-tasks-view.tsx`](../../src/components/officer/officer-tasks-view.tsx) | Default: only unassigned tasks; `forceReassign` for officer | Re-run does not reshuffle unless forced |
-| GAP-F-018 | 8 Teacher | Participation metrics | missing | Dashboard stat cards only | Per-student: last active, tasks moved, messages sent, assessment status | Officer identifies at-risk students |
+| GAP-F-018 | 8 Teacher | Participation metrics | full | [`participation.ts`](../../src/app/actions/participation.ts), [`participation-dashboard.tsx`](../../src/components/officer/participation-dashboard.tsx), [`013_tasks_updated_at.sql`](../../supabase/migrations/013_tasks_updated_at.sql) | Per-student: last active, tasks moved, messages sent, assessment status | Officer identifies at-risk students |
 | GAP-F-019 | 8 Teacher | Override assignments (classroom view) | missing | — | Bulk view of assignments with inline reassign | Same as GAP-F-016 at classroom scope |
 | GAP-F-020 | 3 Onboarding | Officer-customizable skills | missing | Fixed 4 skills [`skills.ts`](../../src/lib/constants/skills.ts) | Officer defines metrics per classroom (label, description, 1–5 scale) | Dynamic onboarding form per class |
 | GAP-F-021 | 9 Mobile | Tasks tab routing | partial | [`student-shell.tsx`](../../src/components/layout/student-shell.tsx) `match: () => false` | Tasks tab → aggregate task list or last classroom board | Tab highlights correctly |
@@ -119,7 +179,7 @@ Legend: **Status** = `missing` | `partial` | `stub`
 | GAP-A-001 | Greedy assignment documentation | missing | [`task-assigner.ts`](../../src/lib/algorithms/task-assigner.ts) | `docs/algorithms/greedy-assignment.md` with complexity, inputs, limitations | Linked from officer tasks UI |
 | GAP-A-002 | Hungarian algorithm implementation | missing | [`.cursor/notes.txt`](../../.cursor/notes.txt) | Optimal bipartite matching student×task by cost matrix | Officer selects “Hungarian” strategy; completes in reasonable time |
 | GAP-A-003 | Hungarian documentation | missing | — | `docs/algorithms/hungarian-assignment.md` | Explains when to use vs greedy |
-| GAP-A-004 | Group balancing strategies | partial | [`group-generation-view.tsx`](../../src/components/officer/group-generation-view.tsx) toast | Implement or hide non-skill strategies | UI matches available algorithms only |
+| GAP-A-004 | Group balancing + **leader** assignment | partial | [`group-generation-view.tsx`](../../src/components/officer/group-generation-view.tsx), [`group-balancer.ts`](../../src/lib/algorithms/group-balancer.ts) | **Officer:** auto-balance members into groups; auto-pick leader (leadership score) or **manual override** before publish | Published groups have one leader each; manual leader change persists |
 
 **Dependencies:** Phase 3. Requires student time estimates (GAP-F-014) for meaningful cost matrix.
 
@@ -148,7 +208,7 @@ Legend: **Status** = `missing` | `partial` | `stub`
 | 5 Classroom detail | Charts | Skill bars, roster | Roster, invite, group links |
 | 6 Workspace | Time estimates tab | Unified tabs (F-012); board, members, chat, estimates | Progress card |
 | 7 Assignment | Estimates matrix, heatmap, override | Greedy assign, results table | Task CRUD, auto-assign |
-| 8 Teacher dashboard | Participation, override UI | Aggregate stats | Classroom grid |
+| 8 Teacher dashboard | Override UI | Participation full; aggregate stats | Classroom grid |
 | 9 Mobile | Tab routing | Kanban responsive | Bottom nav shells |
 
 ```mermaid
@@ -241,13 +301,14 @@ flowchart LR
 
 ### Screen 5 — Classroom detail
 
-**Vision:** Member list; group generation; auto-group; analytics cards; invite sharing.
+**Vision:** Member list; group generation; auto-group **with leaders**; officer manual overrides; analytics cards; invite sharing.
 
 | Component | Target | Current | Route / component |
 |-----------|--------|---------|-------------------|
 | Member list | Searchable roster | Full | [`classroom-detail-view.tsx`](../../src/components/officer/classroom-detail-view.tsx) |
 | Group generation | Link + controls | Full | `routes.officer.generateGroups` |
-| Auto-group | Balancer + publish | Full | [`group-generation-view.tsx`](../../src/components/officer/group-generation-view.tsx) |
+| Auto-group | Balancer + publish | Full | [`group-generation-view.tsx`](../../src/components/officer/group-generation-view.tsx) — **Flow A** |
+| Group leader | Auto (leadership) or manual | Partial | `group-balancer.ts` sets `leader_id`; DnD in generation UI — see GAP-A-004 |
 | Analytics cards | Charts + KPIs | Full — KPI tiles + Recharts bar/line | Same |
 | Invite sharing | Link + QR | Full | [`classroom-invite-qr.tsx`](../../src/components/classrooms/classroom-invite-qr.tsx) |
 
@@ -255,9 +316,9 @@ flowchart LR
 
 ---
 
-### Screen 6 — Group workspace
+### Screen 6 — Group workspace (leaders + members)
 
-**Vision:** Kanban; Todo / In Progress / Review / Done; members sidebar; chat; file upload; progress card.
+**Vision:** Student workspace for **one group**; leader highlighted among peers; Kanban; chat; time estimates; progress card. Officers do not use this screen for day-to-day work.
 
 | Component | Target | Current | Route / component |
 |-----------|--------|---------|-------------------|
@@ -272,20 +333,20 @@ flowchart LR
 
 ---
 
-### Screen 7 — Intelligent task assignment
+### Screen 7 — Intelligent task assignment (officer — Flow B)
 
-**Vision:** Student time estimate table; “Generate Optimal Assignment”; matrix visualization.
+**Vision:** Officer defines group **tasks** for the project; **every student (leaders + members)** fills a time matrix; officer runs optimal **task→member** assignment and may override.
 
 | Component | Target | Current | Route / component |
 |-----------|--------|---------|-------------------|
-| Task table (officer) | CRUD | Full | [`officer-tasks-view.tsx`](../../src/components/officer/officer-tasks-view.tsx) |
-| Time estimates (students) | Matrix input | Full — Estimates tab | GAP-F-014 |
-| Generate button | Run optimizer | Full (greedy) | `autoAssignTasks` |
+| Task table (officer) | CRUD per group | Full | [`officer-tasks-view.tsx`](../../src/components/officer/officer-tasks-view.tsx) |
+| Time estimates (students) | Matrix input | Full — Estimates tab | Leaders + members edit **own row** only (GAP-F-014) |
+| Generate button | Run optimizer | Full (greedy) | `autoAssignTasks` — **officer only** |
 | Results visualization | Matrix layout | Full — heatmap | GAP-F-015 |
 | Student view | Read assignments | Full | [`student-assignments-view.tsx`](../../src/components/student/student-assignments-view.tsx) |
-| Override | Manual reassign | Full | GAP-F-016 |
+| Task override | Officer manual reassign | Full | GAP-F-016 — not group-leader scope |
 
-**Gaps:** GAP-A-001–004
+**Gaps:** GAP-A-001–004 (algorithms). Group leader pick remains **Flow A** (Screen 5 / GAP-A-004).
 
 ---
 
@@ -297,12 +358,12 @@ flowchart LR
 |-----------|--------|---------|-------------------|
 | Classroom monitoring | Grid + detail drill-down | Partial | Officer dashboard + detail |
 | Group analytics | Per-group progress | Partial | [`group-management-view.tsx`](../../src/components/officer/group-management-view.tsx) |
-| Participation metrics | Engagement over time | Missing | GAP-F-018 |
+| Participation metrics | Engagement over time | Full — classroom detail | GAP-F-018 |
 | Classroom activity feed | Recent events | Full | Officer dashboard (GAP-F-006) |
-| Student activity | Per-student participation | Missing | GAP-F-018 |
+| Student activity | Per-student participation | Full — table + roster sheet | GAP-F-018 |
 | Override assignments | Reassign UI | Missing | GAP-F-019 |
 
-**Gaps:** GAP-F-018, GAP-F-019
+**Gaps:** GAP-F-019
 
 ---
 
@@ -462,9 +523,10 @@ created_at timestamptz
 
 **User stories**
 
-- As a student, I enter how long each task will take me.
-- As an officer, I choose Greedy or Hungarian and see a color matrix of assignments.
-- As an officer, I drag a task to another student and leave a reason.
+- As a **group member or leader**, I enter how long each project task will take **me** (my row in the matrix).
+- As an **officer**, I choose Greedy or Hungarian and see a color matrix of **task→member** assignments.
+- As an **officer**, I manually reassign a task to another member and leave a reason.
+- As an **officer**, I auto-balance students into groups and set or override **group leaders** before publish (Flow A — Screen 5).
 
 **Schema touchpoints**
 
@@ -514,7 +576,7 @@ assignment_audit (
 
 **In scope**
 
-- Participation dashboard: charts (Recharts), per-student table (GAP-F-018)
+- Participation dashboard: charts (Recharts), per-student table — done (GAP-F-018)
 - `classroom_skill_templates` + dynamic onboarding form (GAP-F-020)
 - Create classroom sheet — done (GAP-F-007)
 - Classroom detail charts — done (GAP-F-011)
@@ -617,7 +679,7 @@ Use this appendix to avoid re-building shipped features.
 | Skill onboarding (fixed 4 skills) | Full | `src/components/onboarding/skill-assessment-view.tsx` |
 | Officer create classroom + invite/QR | Full | `src/components/classrooms/create-classroom-view.tsx` |
 | Officer classroom detail + roster | Full | `src/components/officer/classroom-detail-view.tsx` |
-| Group generation (greedy balance) + DnD + publish | Full | `src/components/officer/group-generation-view.tsx` |
+| Group generation (greedy balance) + DnD + publish + leader auto/manual | Full | `src/components/officer/group-generation-view.tsx`, `src/lib/algorithms/group-balancer.ts` |
 | Group management view | Full | `src/components/officer/group-management-view.tsx` |
 | Officer task CRUD | Full | `src/components/officer/officer-tasks-view.tsx` |
 | Greedy auto-assign | Full | `src/lib/algorithms/task-assigner.ts`, `autoAssignTasks` |
@@ -672,6 +734,7 @@ Use this appendix to avoid re-building shipped features.
 | `classroom_activity_events` | 1 | Activity feed |
 | `task_time_estimates` | 3 | Student hours per task (matrix) |
 | `assignment_audit` | 3 | Override history |
+| `tasks.updated_at` | 4 | Task activity for participation |
 | `classroom_skill_templates` | 4 | Custom onboarding metrics |
 
 ---
@@ -682,7 +745,7 @@ Use this appendix to avoid re-building shipped features.
 |-------|--------|
 | 0 | Zero critical security findings in retest |
 | 1 | 90% of test students complete join flow on first attempt |
-| 2 | ≥ 1 file uploaded per group in pilot |
+| 2 | All groups publish with a designated leader |
 | 3 | Officer completes assign + override in &lt; 5 minutes |
 | 4 | Officers create ≥ 1 custom skill metric in pilot |
 | 5 | Mobile Lighthouse performance ≥ 80 |
@@ -713,7 +776,8 @@ Use this appendix to avoid re-building shipped features.
 | GAP-F-016 | 3 (done) |
 | GAP-F-017 | 3 (done) |
 | GAP-A-001 – A-004 | 3 |
-| GAP-F-007, F-011, F-018, F-019, F-020 | 4 |
+| GAP-F-018 | 4 (done) |
+| GAP-F-007, F-011, F-019, F-020 | 4 |
 | GAP-F-023, GAP-P-001 – P-005 | 5 |
 
 ---

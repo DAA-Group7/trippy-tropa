@@ -27,7 +27,12 @@ import type {
   ClassroomDetailFull,
   ClassroomRosterStudent,
 } from "@/app/actions/classrooms";
+import type {
+  ClassroomParticipationData,
+  StudentParticipationRow,
+} from "@/app/actions/participation";
 import { ClassroomAnalyticsCharts } from "@/components/officer/classroom-analytics-charts";
+import { ParticipationDashboard } from "@/components/officer/participation-dashboard";
 import { OfficerPageHeader } from "@/components/layout/officer-page-header";
 import { routes } from "@/lib/constants/routes";
 import { cn } from "@/lib/utils";
@@ -38,6 +43,7 @@ const cardShadow =
 interface ClassroomDetailViewProps {
   classroom: ClassroomDetailFull;
   classroomId: string;
+  participation: ClassroomParticipationData | null;
 }
 
 function formatSubjectLabel(subject: string | null): string {
@@ -106,10 +112,12 @@ function StudentRow({
 
 function StudentDetailSheet({
   student,
+  participation,
   open,
   onOpenChange,
 }: {
   student: ClassroomRosterStudent | null;
+  participation: StudentParticipationRow | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
@@ -179,6 +187,39 @@ function StudentDetailSheet({
               here after onboarding.
             </p>
           )}
+
+          {participation && (
+            <div className="border-t border-[#e7e7f3] pt-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#505f76]">
+                Participation (7 days)
+              </p>
+              <ul className="mt-2 space-y-2 text-sm text-[#191b23]">
+                <li>
+                  Last active:{" "}
+                  <span className="font-medium">{participation.lastActiveLabel}</span>
+                </li>
+                <li>
+                  Chat messages:{" "}
+                  <span className="font-medium">{participation.messagesSent7d}</span>
+                </li>
+                <li>
+                  Task board updates:{" "}
+                  <span className="font-medium">{participation.tasksMoved7d}</span>
+                </li>
+                <li>
+                  Assigned tasks:{" "}
+                  <span className="font-medium">
+                    {participation.assignedTaskCount}
+                  </span>
+                </li>
+              </ul>
+              {participation.isAtRisk && (
+                <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-950">
+                  {participation.atRiskReasons.join(" · ")}
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </SheetContent>
     </Sheet>
@@ -188,11 +229,18 @@ function StudentDetailSheet({
 export function ClassroomDetailView({
   classroom,
   classroomId,
+  participation,
 }: ClassroomDetailViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStudent, setSelectedStudent] =
     useState<ClassroomRosterStudent | null>(null);
   const [studentSheetOpen, setStudentSheetOpen] = useState(false);
+
+  const participationByUserId = useMemo(() => {
+    const map = new Map<string, StudentParticipationRow>();
+    participation?.students.forEach((row) => map.set(row.userId, row));
+    return map;
+  }, [participation]);
 
   const openStudent = (student: ClassroomRosterStudent) => {
     setSelectedStudent(student);
@@ -384,6 +432,12 @@ export function ClassroomDetailView({
 
             <ClassroomAnalyticsCharts classroom={classroom} />
 
+            {participation && (
+              <div className="lg:col-span-12">
+                <ParticipationDashboard data={participation} />
+              </div>
+            )}
+
             <div className="lg:col-span-12">
               <div
                 className={cn(
@@ -447,6 +501,11 @@ export function ClassroomDetailView({
       </div>
       <StudentDetailSheet
         student={selectedStudent}
+        participation={
+          selectedStudent
+            ? participationByUserId.get(selectedStudent.id) ?? null
+            : null
+        }
         open={studentSheetOpen}
         onOpenChange={setStudentSheetOpen}
       />

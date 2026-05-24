@@ -505,6 +505,7 @@ export async function overrideTaskAssignment(
         assigned_to: parsed.data.newAssigneeId,
         assignment_match_score: matchScore,
         assignment_reason: assignmentReason,
+        updated_at: new Date().toISOString(),
       })
       .eq("id", task.id);
 
@@ -820,6 +821,7 @@ export async function autoAssignTasks(
             assigned_to: assignment.studentId,
             assignment_match_score: assignment.matchScore,
             assignment_reason: assignment.reason,
+            updated_at: new Date().toISOString(),
           })
           .eq("id", assignment.taskId);
 
@@ -938,7 +940,10 @@ export async function updateTaskStatus(
 
     const { error } = await supabase
       .from("tasks")
-      .update({ status: parsed.data.status })
+      .update({
+        status: parsed.data.status,
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", parsed.data.taskId);
 
     if (error) return { ok: false, error: error.message };
