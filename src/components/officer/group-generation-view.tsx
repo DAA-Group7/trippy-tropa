@@ -15,6 +15,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import {
+  CircleHelp,
   Copy,
   GripVertical,
   Link2,
@@ -261,7 +262,9 @@ export function GroupGenerationView({ context }: GroupGenerationViewProps) {
 
   const handleRegenerate = useCallback(() => {
     if (balancingStrategy !== BALANCING_STRATEGIES[0]) {
-      toast.info("Only skill balancing is available in this version.");
+      toast.info(
+        "Only greedy load balancing (Skill Balancing Mixed) is available in this version."
+      );
     }
     const size = parseGroupSize(groupSize);
     const count = computeGroupCount(
@@ -509,8 +512,16 @@ export function GroupGenerationView({ context }: GroupGenerationViewProps) {
                 </div>
               </div>
               <p className="mt-4 text-sm text-[#505f76]">
-                {context.students.length} students eligible · drag members
-                between groups to adjust before publishing
+                {context.students.length} students eligible · greedy load
+                balancing (strongest first → lowest group total) · drag members
+                between groups to adjust before publishing{" "}
+                <Link
+                  href={routes.officer.groupBalanceHelp}
+                  className="inline-flex items-center gap-1 font-medium text-[#004ac6] hover:underline"
+                >
+                  <CircleHelp className="size-3.5" aria-hidden />
+                  How balancing works
+                </Link>
               </p>
             </section>
 

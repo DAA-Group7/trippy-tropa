@@ -17,7 +17,7 @@ export type DemoGroup = {
 };
 
 export const BALANCING_STRATEGIES = [
-  "Skill Balancing (Mixed)",
+  "Skill Balancing (Mixed)", // greedy load balancing — see docs/algorithms/greedy-group-balancing.md
   "Skill Balancing (Homogeneous)",
   "Random Assignment",
 ] as const;

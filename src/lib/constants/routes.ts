@@ -13,6 +13,7 @@ export const routes = {
   officer: {
     dashboard: "/officer/dashboard",
     autoAssignHelp: "/officer/docs/auto-assign",
+    groupBalanceHelp: "/officer/docs/group-balancing",
     createClassroom: "/officer/classrooms/new",
     classroom: (id: string) => `/officer/classrooms/${id}`,
     generateGroups: (id: string) => `/officer/classrooms/${id}/groups/generate`,

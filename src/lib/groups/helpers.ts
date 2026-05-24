@@ -1,6 +1,10 @@
 import type { SkillRatings } from "@/types/database";
-import type { BalancedGroup, StudentWithSkills } from "@/lib/algorithms/group-balancer";
-import { generateBalancedGroups } from "@/lib/algorithms/group-balancer";
+import {
+  generateBalancedGroups,
+  studentBalanceScore,
+  type BalancedGroup,
+  type StudentWithSkills,
+} from "@/lib/algorithms/group-balancer";
 
 export type GroupVarianceBadge = "high-variance" | "balanced" | "homogeneous";
 
@@ -66,7 +70,7 @@ export function computeGroupBadge(
   const sums = memberIds
     .map((id) => studentsById.get(id))
     .filter((s): s is StudentWithSkills => !!s)
-    .map((s) => skillSum(s.skills));
+    .map((s) => studentBalanceScore(s));
 
   if (sums.length === 0) return "homogeneous";
 
@@ -85,7 +89,7 @@ export function computeVarianceBadge(
   const totals = groups.map((g) => {
     if (g.memberIds.length === 0) return 0;
     const sum = g.memberIds.reduce(
-      (acc, id) => acc + skillSum(studentsById.get(id)!.skills),
+      (acc, id) => acc + studentBalanceScore(studentsById.get(id)!),
       0
     );
     return sum / g.memberIds.length;
