@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { ArrowLeft, Plus, Trash2, Wand2 } from "lucide-react";
 import { toast } from "sonner";
@@ -43,6 +43,11 @@ export function OfficerTasksView({ context }: OfficerTasksViewProps) {
   const [primarySkill, setPrimarySkill] = useState<SkillKey>("technical");
   const [skillWeight, setSkillWeight] = useState("4");
 
+  const unassignedCount = useMemo(
+    () => context.tasks.filter((t) => !t.assignedTo).length,
+    [context.tasks]
+  );
+
   const handleCreate = () => {
     if (!groupId) {
       toast.error("Create groups before adding tasks.");
@@ -83,7 +88,44 @@ export function OfficerTasksView({ context }: OfficerTasksViewProps) {
         toast.error(result.error);
         return;
       }
-      toast.success(`Assigned ${result.assignedCount} tasks optimally`);
+      if (result.assignedCount === 0) {
+        toast.info(
+          result.skippedAssigned > 0
+            ? "All tasks are already assigned. Use reassign all to run again."
+            : "No new tasks to assign."
+        );
+        return;
+      }
+      const skipped =
+        result.skippedAssigned > 0
+          ? ` (${result.skippedAssigned} already assigned, left unchanged)`
+          : "";
+      toast.success(`Assigned ${result.assignedCount} task(s)${skipped}`);
+    });
+  };
+
+  const handleForceReassign = () => {
+    if (
+      !confirm(
+        "Re-run auto-assign for every task in this classroom? Existing assignees may change."
+      )
+    ) {
+      return;
+    }
+
+    startTransition(async () => {
+      const result = await autoAssignTasks(context.classroomId, {
+        forceReassign: true,
+      });
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      if (result.assignedCount === 0) {
+        toast.info("No assignment changes were made.");
+        return;
+      }
+      toast.success(`Reassigned ${result.assignedCount} task(s)`);
     });
   };
 
@@ -122,8 +164,8 @@ export function OfficerTasksView({ context }: OfficerTasksViewProps) {
               Task management
             </h1>
             <p className="mt-1 text-sm text-[#434655]">
-              Create project tasks per group. Students fill a time estimate matrix;
-              auto-assign uses their self-reported hours.
+              Create project tasks per group. Auto-assign fills only unassigned
+              tasks by default; use reassign all to reshuffle.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -133,19 +175,39 @@ export function OfficerTasksView({ context }: OfficerTasksViewProps) {
               disabled={
                 isPending ||
                 context.groups.length === 0 ||
+                unassignedCount === 0 ||
                 (context.estimateStatus.totalCells > 0 &&
                   !context.estimateStatus.isComplete)
               }
               title={
-                context.estimateStatus.totalCells > 0 &&
-                !context.estimateStatus.isComplete
-                  ? "Waiting for all group members to complete time estimates"
-                  : undefined
+                unassignedCount === 0
+                  ? "All tasks already have assignees"
+                  : context.estimateStatus.totalCells > 0 &&
+                      !context.estimateStatus.isComplete
+                    ? "Waiting for all group members to complete time estimates"
+                    : "Assign only tasks without an assignee"
               }
               className="inline-flex items-center gap-2 rounded-lg border border-[#c3c6d7] bg-white px-4 py-2.5 text-sm font-medium text-[#505f76] hover:bg-[#f3f3fe] disabled:opacity-60"
             >
               <Wand2 className="size-4" />
-              Auto assign tasks
+              Auto assign
+              {unassignedCount > 0 ? ` (${unassignedCount})` : ""}
+            </button>
+            <button
+              type="button"
+              onClick={handleForceReassign}
+              disabled={
+                isPending ||
+                context.groups.length === 0 ||
+                context.tasks.length === 0 ||
+                (context.estimateStatus.totalCells > 0 &&
+                  !context.estimateStatus.isComplete)
+              }
+              title="Re-optimize every task; may change current assignees"
+              className="inline-flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-950 hover:bg-amber-100 disabled:opacity-60"
+            >
+              <Wand2 className="size-4" />
+              Reassign all
             </button>
             <button
               type="button"

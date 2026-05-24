@@ -655,12 +655,19 @@ export async function deleteTask(
   }
 }
 
+export type AutoAssignOptions = {
+  /** When true, re-optimizes all tasks and may change existing assignees. */
+  forceReassign?: boolean;
+};
+
 export async function autoAssignTasks(
-  classroomId: string
+  classroomId: string,
+  options: AutoAssignOptions = {}
 ): Promise<
-  | { ok: true; assignedCount: number }
+  | { ok: true; assignedCount: number; skippedAssigned: number }
   | { ok: false; error: string }
 > {
+  const forceReassign = options.forceReassign === true;
   try {
     const ctx = await getOfficerContext();
     if (!ctx || !(await assertOwnsClassroom(ctx, classroomId))) {
@@ -695,6 +702,7 @@ export async function autoAssignTasks(
     );
 
     let assignedCount = 0;
+    let skippedAssigned = 0;
     const notifyRows: {
       userId: string;
       taskTitle: string;
@@ -749,24 +757,63 @@ export async function autoAssignTasks(
         .select("id, title, required_skills, assigned_to")
         .eq("group_id", group.id);
 
-      const toAssign: TaskToAssign[] = (taskRows ?? []).map((t) => ({
+      const allTasks = taskRows ?? [];
+      if (allTasks.length === 0) continue;
+
+      const alreadyAssigned = allTasks.filter((t) => t.assigned_to);
+      skippedAssigned += forceReassign
+        ? 0
+        : alreadyAssigned.length;
+
+      const tasksForRun = forceReassign
+        ? allTasks
+        : allTasks.filter((t) => !t.assigned_to);
+
+      if (tasksForRun.length === 0) continue;
+
+      const initialRemaining = forceReassign
+        ? undefined
+        : (() => {
+            const remaining = new Map(
+              students.map((s) => [s.id, DEFAULT_STUDENT_CAPACITY_HOURS])
+            );
+            for (const task of alreadyAssigned) {
+              const assigneeId = task.assigned_to as string;
+              const hours = getEstimateHours(
+                classroomEstimateMap,
+                assigneeId,
+                task.id
+              );
+              if (hours != null && hours > 0) {
+                remaining.set(
+                  assigneeId,
+                  (remaining.get(assigneeId) ?? 0) - hours
+                );
+              }
+            }
+            return remaining;
+          })();
+
+      const toAssign: TaskToAssign[] = tasksForRun.map((t) => ({
         id: t.id,
         title: t.title,
         requiredSkills: parseRequiredSkills(t.required_skills),
       }));
 
-      if (toAssign.length === 0) continue;
-
       const assignments = assignTasksOptimally(
         toAssign,
         students,
         (studentId, taskId) =>
-          getEstimateHours(classroomEstimateMap, studentId, taskId)
+          getEstimateHours(classroomEstimateMap, studentId, taskId),
+        initialRemaining
       );
 
-      const taskById = new Map((taskRows ?? []).map((t) => [t.id, t]));
+      const taskById = new Map(allTasks.map((t) => [t.id, t]));
 
       for (const assignment of assignments) {
+        const task = taskById.get(assignment.taskId);
+        const previousAssignee = task?.assigned_to ?? null;
+
         const { error } = await ctx.supabase
           .from("tasks")
           .update({
@@ -777,9 +824,15 @@ export async function autoAssignTasks(
           .eq("id", assignment.taskId);
 
         if (!error) {
-          assignedCount += 1;
-          const task = taskById.get(assignment.taskId);
-          if (task) {
+          const assigneeChanged =
+            previousAssignee !== assignment.studentId;
+          if (!previousAssignee) {
+            assignedCount += 1;
+          } else if (forceReassign && assigneeChanged) {
+            assignedCount += 1;
+          }
+
+          if (task && assigneeChanged) {
             notifyRows.push({
               userId: assignment.studentId,
               taskTitle: task.title,
@@ -792,23 +845,37 @@ export async function autoAssignTasks(
     }
 
     if (assignedCount === 0) {
+      if (!forceReassign && skippedAssigned > 0) {
+        return {
+          ok: true,
+          assignedCount: 0,
+          skippedAssigned,
+        };
+      }
       return {
         ok: false,
-        error: "No tasks to assign. Add tasks and ensure members have skill ratings.",
+        error:
+          "No tasks to assign. Add tasks and ensure members have skill ratings.",
       };
     }
 
-    await notifyTaskAssignmentsBulk(notifyRows);
+    if (notifyRows.length > 0) {
+      await notifyTaskAssignmentsBulk(notifyRows);
+    }
 
     await recordClassroomActivity(ctx.supabase, {
       classroomId,
       actorId: ctx.userId,
       eventType: "assignment_run",
-      payload: { assignedCount },
+      payload: {
+        assignedCount,
+        forceReassign,
+        skippedAssigned,
+      },
     });
 
     revalidateTaskPaths(classroomId);
-    return { ok: true, assignedCount };
+    return { ok: true, assignedCount, skippedAssigned };
   } catch {
     return { ok: false, error: "Could not run auto-assign." };
   }

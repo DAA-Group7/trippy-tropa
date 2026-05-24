@@ -54,9 +54,15 @@ export function computeTaskMatchScore(
 export function assignTasksOptimally(
   tasks: TaskToAssign[],
   students: StudentCapacity[],
-  getEstimateHours: EstimateHoursLookup
+  getEstimateHours: EstimateHoursLookup,
+  initialRemaining?: Map<string, number>
 ): TaskAssignment[] {
-  const remaining = new Map(students.map((s) => [s.id, s.availableHours]));
+  const remaining = new Map(
+    students.map((s) => [
+      s.id,
+      initialRemaining?.get(s.id) ?? s.availableHours,
+    ])
+  );
   const assignments: TaskAssignment[] = [];
 
   for (const task of tasks) {
