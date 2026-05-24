@@ -11,6 +11,7 @@ import {
   notifyTaskAssignmentsBulk,
   notifyTaskStatusUpdated,
 } from "@/app/actions/notifications";
+import { recordClassroomActivity } from "@/lib/activity/record";
 import {
   DEFAULT_STUDENT_CAPACITY_HOURS,
   formatRequiredSkills,
@@ -152,6 +153,7 @@ async function assertOwnsClassroom(
 }
 
 function revalidateTaskPaths(classroomId: string) {
+  revalidatePath(routes.officer.dashboard);
   revalidatePath(routes.officer.tasks(classroomId));
   revalidatePath(routes.student.tasks(classroomId));
   revalidatePath(routes.student.assignments(classroomId));
@@ -346,6 +348,13 @@ export async function createTask(
       return { ok: false, error: error?.message ?? "Failed to create task." };
     }
 
+    await recordClassroomActivity(ctx.supabase, {
+      classroomId,
+      actorId: ctx.userId,
+      eventType: "task_created",
+      payload: { taskId: data.id, taskTitle: parsed.data.title },
+    });
+
     revalidateTaskPaths(classroomId);
     return { ok: true, taskId: data.id };
   } catch {
@@ -363,9 +372,25 @@ export async function deleteTask(
       return { ok: false, error: "Access denied." };
     }
 
+    const { data: taskRow } = await ctx.supabase
+      .from("tasks")
+      .select("title")
+      .eq("id", taskId)
+      .maybeSingle();
+
     const { error } = await ctx.supabase.from("tasks").delete().eq("id", taskId);
 
     if (error) return { ok: false, error: error.message };
+
+    await recordClassroomActivity(ctx.supabase, {
+      classroomId,
+      actorId: ctx.userId,
+      eventType: "task_deleted",
+      payload: {
+        taskId,
+        taskTitle: taskRow?.title ?? "Task",
+      },
+    });
 
     revalidateTaskPaths(classroomId);
     return { ok: true };
@@ -498,6 +523,14 @@ export async function autoAssignTasks(
     }
 
     await notifyTaskAssignmentsBulk(notifyRows);
+
+    await recordClassroomActivity(ctx.supabase, {
+      classroomId,
+      actorId: ctx.userId,
+      eventType: "assignment_run",
+      payload: { assignedCount },
+    });
+
     revalidateTaskPaths(classroomId);
     return { ok: true, assignedCount };
   } catch {

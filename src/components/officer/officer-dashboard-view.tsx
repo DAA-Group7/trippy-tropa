@@ -11,8 +11,10 @@ import {
   TrendingUp,
   Users,
 } from "lucide-react";
+import type { ClassroomActivityItem } from "@/app/actions/activity";
 import type { OfficerDashboardData } from "@/app/actions/classrooms";
 import type { NotificationItem } from "@/app/actions/notifications";
+import { ClassroomActivityFeed } from "@/components/officer/classroom-activity-feed";
 import { useNotificationsRealtime } from "@/hooks/use-notifications-realtime";
 import { OfficerTopBar } from "@/components/layout/officer-top-bar";
 import { ClassroomCard, NewClassroomCard } from "@/components/officer/classroom-card";
@@ -26,6 +28,7 @@ interface OfficerDashboardViewProps {
   data: OfficerDashboardData;
   userId: string;
   initialNotifications: NotificationItem[];
+  activity: ClassroomActivityItem[];
 }
 
 function StatCard({
@@ -80,6 +83,7 @@ export function OfficerDashboardView({
   data,
   userId,
   initialNotifications,
+  activity,
 }: OfficerDashboardViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const { items: notificationItems, setItems: setNotificationItems } =
@@ -167,6 +171,8 @@ export function OfficerDashboardView({
             iconColor="text-[#ba1a1a]"
           />
         </div>
+
+        <ClassroomActivityFeed items={activity} />
 
         <section>
           <div className="mb-4 flex items-center justify-between">

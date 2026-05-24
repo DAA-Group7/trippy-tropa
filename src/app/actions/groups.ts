@@ -10,6 +10,7 @@ import { buildJoinUrl } from "@/lib/invite";
 import { notifyGroupAssignments } from "@/app/actions/notifications";
 import { createClient } from "@/lib/supabase/server";
 import { routes } from "@/lib/constants/routes";
+import { recordClassroomActivity } from "@/lib/activity/record";
 import { createLogger, maskUserId } from "@/lib/logger";
 import type { SkillRatings } from "@/types/database";
 
@@ -355,6 +356,13 @@ export async function publishGroups(
     }
 
     await notifyGroupAssignments(classroomId, notifyRows);
+
+    await recordClassroomActivity(ctx.supabase, {
+      classroomId,
+      actorId: ctx.userId,
+      eventType: "groups_published",
+      payload: { groupCount: groups.length },
+    });
 
     revalidatePath(routes.officer.dashboard);
     revalidatePath(routes.officer.classroom(classroomId));

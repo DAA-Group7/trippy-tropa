@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { notifyStudentJoinedClassroom } from "@/app/actions/notifications";
+import { recordClassroomActivity } from "@/lib/activity/record";
 import { createClient } from "@/lib/supabase/server";
 import { routes } from "@/lib/constants/routes";
 import { createLogger, maskUserId } from "@/lib/logger";
@@ -84,7 +85,7 @@ export async function enrollInClassroom(
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, skills_completed")
+    .select("role, skills_completed, full_name, email")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -144,7 +145,20 @@ export async function enrollInClassroom(
     classroom.name
   );
 
+  const studentName =
+    profile.full_name?.trim() ||
+    profile.email?.split("@")[0] ||
+    "A student";
+
+  await recordClassroomActivity(supabase, {
+    classroomId: classroom.id,
+    actorId: user.id,
+    eventType: "enrolled",
+    payload: { studentName, studentId: user.id },
+  });
+
   revalidatePath(routes.student.dashboard);
+  revalidatePath(routes.officer.dashboard);
 
   log.info("enroll_success", {
     classroomId: classroom.id,

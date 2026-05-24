@@ -9,6 +9,13 @@ export type NotificationKind =
   | "classroom_joined"
   | "deadline";
 
+export type ClassroomActivityEventType =
+  | "enrolled"
+  | "groups_published"
+  | "task_created"
+  | "task_deleted"
+  | "assignment_run";
+
 export type SkillKey =
   | "communication"
   | "leadership"
