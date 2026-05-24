@@ -88,15 +88,18 @@ export function ClassroomCard({ classroom, coverIndex }: ClassroomCardProps) {
   );
 }
 
-export function NewClassroomCard() {
-  return (
-    <Link
-      href={routes.officer.createClassroom}
-      className={cn(
-        "rounded-xl border border-[#c3c6d7] bg-white p-4 shadow-sm transition-shadow",
-        "hover:shadow-[0_10px_15px_-3px_rgba(0,0,0,0.08)]"
-      )}
-    >
+interface NewClassroomCardProps {
+  onCreateClick?: () => void;
+}
+
+export function NewClassroomCard({ onCreateClick }: NewClassroomCardProps) {
+  const cardClassName = cn(
+    "w-full rounded-xl border border-[#c3c6d7] bg-white p-4 text-left shadow-sm transition-shadow",
+    "hover:shadow-[0_10px_15px_-3px_rgba(0,0,0,0.08)]"
+  );
+
+  const inner = (
+    <>
       <div className="mb-4 flex h-32 flex-col items-center justify-center rounded-lg border border-dashed border-[#c3c6d7] bg-[#e7e7f3] transition-colors hover:bg-[#e1e2ed]">
         <div className="mb-2 flex size-10 items-center justify-center rounded-full bg-[#2563eb] text-white shadow-sm">
           <span className="text-2xl leading-none">+</span>
@@ -112,6 +115,20 @@ export function NewClassroomCard() {
       <div className="flex items-center gap-1 border-t border-[#c3c6d7] pt-3 opacity-50">
         <span className="text-xs text-[#505f76]">Tap to set up →</span>
       </div>
+    </>
+  );
+
+  if (onCreateClick) {
+    return (
+      <button type="button" onClick={onCreateClick} className={cardClassName}>
+        {inner}
+      </button>
+    );
+  }
+
+  return (
+    <Link href={routes.officer.createClassroom} className={cardClassName}>
+      {inner}
     </Link>
   );
 }

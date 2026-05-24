@@ -91,7 +91,7 @@ Legend: **Status** = `missing` | `partial` | `stub`
 | GAP-F-003 | 2 Auth | Password reset | full | [`forgot-password-card.tsx`](../../src/components/auth/forgot-password-card.tsx), [`reset-password-card.tsx`](../../src/components/auth/reset-password-card.tsx), [`auth/callback/route.ts`](../../src/app/auth/callback/route.ts) | Supabase reset email flow | User receives reset link and can set new password |
 | GAP-F-005 | 2 Auth | Preserve invite `code` in middleware | full | [`login-redirect.ts`](../../src/lib/auth/login-redirect.ts), [`middleware.ts`](../../src/lib/supabase/middleware.ts) | Redirects to login keep `?code=` and `redirect` | Register from invite resumes join after auth |
 | GAP-F-006 | 4 Dashboard | Classroom activity feed | full | [`010_classroom_activity_events.sql`](../../supabase/migrations/010_classroom_activity_events.sql), [`activity.ts`](../../src/app/actions/activity.ts), [`classroom-activity-feed.tsx`](../../src/components/officer/classroom-activity-feed.tsx) | Chronological events: enroll, group publish, task changes, assign runs | Officer sees last 20 events per classroom or global |
-| GAP-F-007 | 4 Dashboard | Create classroom modal | missing | Full page [`/officer/classrooms/new`](../../src/app/officer/classrooms/new/page.tsx) | Sheet/Dialog on dashboard with same fields as create page | Create without leaving dashboard |
+| GAP-F-007 | 4 Dashboard | Create classroom modal | full | [`create-classroom-sheet.tsx`](../../src/components/classrooms/create-classroom-sheet.tsx), [`create-classroom-form.tsx`](../../src/components/classrooms/create-classroom-form.tsx) | Sheet on dashboard with same fields as create page | Create without leaving dashboard |
 | GAP-F-008 | 4 Dashboard | Student join from dashboard | partial | [`student-dashboard-view.tsx`](../../src/components/student/student-dashboard-view.tsx) | Invite code field → enroll | Student joins new class from dashboard |
 | GAP-F-009 | 4 Dashboard | Student profile avatar | partial | [`student-dashboard-demo.ts`](../../src/lib/constants/student-dashboard-demo.ts) `STUDENT_PROFILE` | Use initials or uploaded avatar from profile | No hardcoded external avatar URL |
 | GAP-F-010 | 4 Dashboard | Student search / schedule | stub | Disabled search; “coming soon” toasts | Search enrolled classes/tasks or defer with hidden UI | No misleading enabled controls |
@@ -145,7 +145,7 @@ Legend: **Status** = `missing` | `partial` | `stub`
 | 1 Landing | — | Screen 1 complete (GAP-F-001, F-002) | Page exists |
 | 2 Auth | — | Invite middleware + banner (GAP-F-003, F-005) | Login, register, invite join |
 | 3 Onboarding | Custom metrics per class | — | 3-step 1–5 assessment |
-| 4 Dashboard | Create modal | Activity feed done (F-006); student avatar, search stub | Officer cards; student live data |
+| 4 Dashboard | Student avatar, search stub | Create modal + activity feed (F-006, F-007) | Officer cards; student live data |
 | 5 Classroom detail | Charts | Skill bars, roster | Roster, invite, group links |
 | 6 Workspace | Files, unified tabs | Kanban separate route | Members, chat, progress |
 | 7 Assignment | Estimates matrix, heatmap, override | Greedy assign, results table | Task CRUD, auto-assign |
@@ -233,10 +233,10 @@ flowchart LR
 | Officer classroom cards | List + stats | Full | [`officer-dashboard-view.tsx`](../../src/components/officer/officer-dashboard-view.tsx) |
 | Student classroom cards | Enrolled list | Full (live data) | [`student-dashboard.ts`](../../src/app/actions/student-dashboard.ts) |
 | Join via code | Input + submit | Partial | `routes.join`; GAP-F-008 on student dash |
-| Create modal | On dashboard | Missing — full page | [`create-classroom-view.tsx`](../../src/components/classrooms/create-classroom-view.tsx) |
+| Create modal | On dashboard | Full — sheet + full page | [`create-classroom-sheet.tsx`](../../src/components/classrooms/create-classroom-sheet.tsx) |
 | Activity feed | Recent events | Full | Last 20 events on officer dashboard |
 
-**Gaps:** GAP-F-007, GAP-F-008, GAP-F-009, GAP-F-010
+**Gaps:** GAP-F-008, GAP-F-009, GAP-F-010
 
 ---
 
@@ -376,6 +376,7 @@ flowchart LR
 - Remove or hide search/schedule stubs (GAP-F-010)
 - Mobile: wire Tasks and Notifications tabs (GAP-F-021, F-022)
 - Officer activity feed — done (GAP-F-006)
+- Create classroom sheet — done (GAP-F-007)
 
 **Out of scope**
 
@@ -544,7 +545,7 @@ assignment_audit (
 
 - Participation dashboard: charts (Recharts), per-student table (GAP-F-018)
 - `classroom_skill_templates` + dynamic onboarding form (GAP-F-020)
-- Create classroom Sheet on officer dashboard (GAP-F-007)
+- Create classroom sheet — done (GAP-F-007)
 - Classroom detail charts (GAP-F-011)
 
 **Out of scope**

@@ -6,7 +6,6 @@ import {
   AlertCircle,
   ClipboardList,
   Layers,
-  Plus,
   Minus,
   TrendingUp,
   Users,
@@ -18,6 +17,8 @@ import { ClassroomActivityFeed } from "@/components/officer/classroom-activity-f
 import { useNotificationsRealtime } from "@/hooks/use-notifications-realtime";
 import { OfficerTopBar } from "@/components/layout/officer-top-bar";
 import { ClassroomCard, NewClassroomCard } from "@/components/officer/classroom-card";
+import { CreateClassroomSheet } from "@/components/classrooms/create-classroom-sheet";
+import { CreateClassroomTrigger } from "@/components/officer/create-classroom-trigger";
 import { routes } from "@/lib/constants/routes";
 import { cn } from "@/lib/utils";
 
@@ -86,6 +87,7 @@ export function OfficerDashboardView({
   activity,
 }: OfficerDashboardViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [createClassroomOpen, setCreateClassroomOpen] = useState(false);
   const { items: notificationItems, setItems: setNotificationItems } =
     useNotificationsRealtime(userId, initialNotifications);
 
@@ -112,6 +114,10 @@ export function OfficerDashboardView({
 
   return (
     <>
+      <CreateClassroomSheet
+        open={createClassroomOpen}
+        onOpenChange={setCreateClassroomOpen}
+      />
       <OfficerTopBar
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
@@ -129,13 +135,11 @@ export function OfficerDashboardView({
               Welcome back, {data.officerName}. Here is your academic summary.
             </p>
           </div>
-          <Link
-            href={routes.officer.createClassroom}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#2563eb] px-6 py-2.5 text-sm font-medium text-white shadow-sm transition-opacity hover:bg-[#004ac6] hover:opacity-95"
-          >
-            <Plus className="size-[18px]" />
-            Create Classroom
-          </Link>
+          <CreateClassroomTrigger
+            open={createClassroomOpen}
+            onOpenChange={setCreateClassroomOpen}
+            withSheet={false}
+          />
         </div>
 
         <div className="mb-10 grid grid-cols-1 gap-6 md:grid-cols-3">
@@ -180,12 +184,10 @@ export function OfficerDashboardView({
               Created Classrooms
             </h3>
             {data.classrooms.length > 0 && (
-              <Link
-                href={routes.officer.createClassroom}
-                className="text-sm font-medium text-[#004ac6] hover:underline"
-              >
-                View All
-              </Link>
+              <p className="text-sm text-[#505f76]">
+                {data.classrooms.length} classroom
+                {data.classrooms.length === 1 ? "" : "s"}
+              </p>
             )}
           </div>
 
@@ -199,15 +201,17 @@ export function OfficerDashboardView({
                   Create a classroom to generate a join link students can click
                   to enroll.
                 </p>
-                <Link
-                  href={routes.officer.createClassroom}
-                  className="mt-6 inline-flex items-center gap-2 rounded-lg bg-[#2563eb] px-6 py-2.5 text-sm font-medium text-white hover:bg-[#004ac6]"
-                >
-                  <Plus className="size-4" />
-                  Create Classroom
-                </Link>
+                <div className="mt-6">
+                  <CreateClassroomTrigger
+                    open={createClassroomOpen}
+                    onOpenChange={setCreateClassroomOpen}
+                    withSheet={false}
+                  />
+                </div>
               </div>
-              <NewClassroomCard />
+              <NewClassroomCard
+                onCreateClick={() => setCreateClassroomOpen(true)}
+              />
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -218,7 +222,9 @@ export function OfficerDashboardView({
                   coverIndex={index}
                 />
               ))}
-              <NewClassroomCard />
+              <NewClassroomCard
+                onCreateClick={() => setCreateClassroomOpen(true)}
+              />
             </div>
           )}
 
